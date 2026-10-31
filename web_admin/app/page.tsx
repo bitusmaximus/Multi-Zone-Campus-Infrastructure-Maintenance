@@ -13,6 +13,7 @@ import {
   Filter,
   Mail,
   MapPin,
+  Pencil,
   Search,
   Send,
   ShieldCheck,
@@ -70,7 +71,10 @@ export default function DashboardPage() {
   const [selectedId, setSelectedId] = useState(initialTickets[0].id);
   const [activeFilter, setActiveFilter] = useState('All open');
   const [search, setSearch] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [email, setEmail] = useState('');
@@ -177,6 +181,11 @@ export default function DashboardPage() {
   const selected = filteredTickets.find((ticket) => ticket.id === selectedId) ?? null;
 
   useEffect(() => {
+    setDescriptionDraft(selected?.description ?? '');
+    setIsEditingDescription(false);
+  }, [selected?.id]);
+
+  useEffect(() => {
     if (selectedId && filteredTickets.length > 0 && !filteredTickets.some((ticket) => ticket.id === selectedId)) {
       setSelectedId(filteredTickets[0].id);
     }
@@ -217,13 +226,18 @@ export default function DashboardPage() {
 
   const saveChanges = async () => {
     if (!selected) return;
+    const updatedDescription = isEditingDescription ? descriptionDraft.trim() : selected.description;
+    if (isEditingDescription && updatedDescription.length < 10) {
+      setSyncError('Description must include at least 10 characters.');
+      return;
+    }
     const client = supabase;
     setIsSaving(true);
     try {
       if (client && isAuthenticated) {
         const { data: userData, error: userError } = await client.auth.getUser();
         if (userError || !userData.user) throw userError ?? new Error('Dispatcher session has expired.');
-        const { error: updateError } = await client.from('tickets').update({ priority: selected.priority, status: selected.status }).eq('id', selected.id);
+        const { error: updateError } = await client.from('tickets').update({ priority: selected.priority, status: selected.status, description: updatedDescription }).eq('id', selected.id);
         if (updateError) throw updateError;
         if (selected.technician) {
           const technician = technicians.find((item) => item.name === selected.technician);
@@ -246,7 +260,12 @@ export default function DashboardPage() {
           }
         }
         await refreshBackend();
+      } else {
+        setTickets((current) => current.map((ticket) => ticket.id === selected.id ? { ...ticket, description: updatedDescription } : ticket));
       }
+      setDescriptionDraft(updatedDescription);
+      setIsEditingDescription(false);
+      setSyncError('');
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2400);
     } catch (error) {
@@ -279,7 +298,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="queue-section">
-            <div className="queue-heading"><div><h2>Maintenance requests</h2><span>{filteredTickets.length} requests <span className="subtle-separator">·</span> priority sorted</span></div><button className="filter-button" onClick={() => setActiveFilter(activeFilter === 'All open' ? 'Pending' : 'All open')}><Filter size={15} /> Filter <ChevronDown size={14} /></button></div>
+            <div className="queue-heading"><div><h2>Maintenance requests</h2><span>{filteredTickets.length} requests <span className="subtle-separator">·</span> priority sorted</span></div><div className="filter-menu-wrap"><button className="filter-button" type="button" title="Filter requests by status or urgency" aria-label="Filter requests by status or urgency" aria-expanded={filterOpen} onClick={() => setFilterOpen((open) => !open)}><Filter size={15} /> Filter <ChevronDown size={14} /></button>{filterOpen && <div className="filter-popover" role="group" aria-label="Filter requests by status or urgency"><span className="filter-popover-heading">Show requests</span>{['All open', 'Pending', 'Assigned', 'In Progress', 'Resolved', 'Emergency'].map((filter) => <button key={filter} type="button" className="filter-option" aria-pressed={activeFilter === filter} onClick={() => { setActiveFilter(filter); setFilterOpen(false); }}>{filter}{activeFilter === filter && <Check size={14} />}</button>)}</div>}</div></div>
             <div className="queue-toolbar"><div className="filter-tabs" role="tablist" aria-label="Filter tickets">{['All open', 'Emergency', 'In Progress', 'Resolved'].map((filter) => <button key={filter} role="tab" aria-selected={activeFilter === filter} className={activeFilter === filter ? 'filter-tab selected' : 'filter-tab'} onClick={() => setActiveFilter(filter)}>{filter}{filter === 'Emergency' && emergencyCount > 0 && <span className="tab-count">{emergencyCount}</span>}</button>)}</div><label className="search-box"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search requests" aria-label="Search requests" /><kbd>/</kbd></label></div>
 
             <div className="dispatch-layout">
@@ -296,11 +315,11 @@ export default function DashboardPage() {
                 <h3>{selected.title}</h3><div className="detail-meta"><span className={`status-pill status-${selected.status.toLowerCase().replaceAll(' ', '-')}`}>{selected.status}</span><span className="detail-date">Reported {formatTime(selected.created_at)}</span></div>
                 <div className="detail-divider" />
                 <div className="detail-group"><label>LOCATION</label><div className="location-detail"><MapPin size={15} /><div><strong>{selected.campus}</strong><span>{selected.category} <span>·</span> {selected.block}{selected.room ? `, ${selected.room}` : ''}</span></div></div>{selected.latitude != null && selected.longitude != null && <a className="map-link" href={`https://www.google.com/maps/search/?api=1&query=${selected.latitude},${selected.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13} /> Open in Google Maps</a>}</div>
-                <div className="detail-group"><label>DESCRIPTION</label><p className="description-text">{selected.description}</p></div>
+                <div className="detail-group description-group"><div className="detail-label-row"><label htmlFor="ticket-description">DESCRIPTION</label><button className="description-edit-button" type="button" title={isEditingDescription ? 'Cancel description edit' : 'Edit report description'} onClick={() => { if (isEditingDescription) setDescriptionDraft(selected.description); else setDescriptionDraft(selected.description); setIsEditingDescription((editing) => !editing); setSaved(false); }}>{isEditingDescription ? <X size={13} /> : <Pencil size={13} />}{isEditingDescription ? 'Cancel' : 'Edit'}</button></div>{isEditingDescription ? <textarea id="ticket-description" className="description-editor" value={descriptionDraft} minLength={10} maxLength={1000} rows={4} onChange={(event) => { setDescriptionDraft(event.target.value); setSaved(false); }} aria-label="Edit report description" /> : <p className="description-text">{selected.description}</p>}{isEditingDescription && <span className="description-hint">Edits update the ticket description when you save dispatch changes.</span>}</div>
                 <div className="detail-fields"><label className="detail-group"><span>PRIORITY</span><select value={selected.priority} onChange={(event) => updateSelected({ priority: event.target.value as Priority })}>{priorityOptions.map((priority) => <option key={priority}>{priority}</option>)}</select></label><label className="detail-group"><span>STATUS</span><select value={selected.status} onChange={(event) => updateSelected({ status: event.target.value as TicketStatus })}>{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label></div>
                 <div className="detail-group"><label htmlFor="technician">ASSIGN TECHNICIAN</label><div className="select-wrap"><select id="technician" value={selected.technician} onChange={(event) => updateSelected({ technician: event.target.value, status: event.target.value && selected.status === 'Pending' ? 'Assigned' : selected.status })}><option value="">Select a technician</option>{technicians.map((technician) => <option key={technician.id} value={technician.name}>{technician.name}</option>)}</select><ChevronDown size={15} /></div></div>
                 {selectedTechnician?.email && <a className="contact-link" href={`mailto:${selectedTechnician.email}?subject=${encodeURIComponent(`Campus dispatch request #${selected.ticket_number}`)}&body=${encodeURIComponent(`${selected.title}\n${selected.campus} · ${selected.block}${selected.room ? ` · ${selected.room}` : ''}\nPriority: ${selected.priority}\nStatus: ${selected.status}`)}`}><Mail size={14} /> Email {selectedTechnician.name}</a>}
-                <div className="detail-footer"><button className={`assign-button ${saved ? 'saved' : ''}`} onClick={() => void saveChanges()} disabled={isSaving || (isSupabaseConfigured && !isAuthenticated)}>{isSaving ? <Activity size={15} /> : saved ? <Check size={15} /> : <Send size={15} />}{isSaving ? 'Saving...' : saved ? 'Changes saved' : 'Save dispatch changes'}</button><span>{isSupabaseConfigured && isAuthenticated ? 'Changes are saved to Supabase.' : isSupabaseConfigured ? 'Sign in to save changes.' : 'Changes are stored in this demo session.'}</span></div>
+                <div className="detail-footer"><button className={`assign-button ${saved ? 'saved' : ''}`} onClick={() => void saveChanges()} disabled={isSaving || (isSupabaseConfigured && !isAuthenticated) || (isEditingDescription && descriptionDraft.trim().length < 10)}>{isSaving ? <Activity size={15} /> : saved ? <Check size={15} /> : <Send size={15} />}{isSaving ? 'Saving...' : saved ? 'Changes saved' : 'Save dispatch changes'}</button><span>{isSupabaseConfigured && isAuthenticated ? 'Changes are saved to Supabase.' : isSupabaseConfigured ? 'Sign in to save changes.' : 'Changes are stored in this demo session.'}</span></div>
               </aside>}
             </div>
           </section>
