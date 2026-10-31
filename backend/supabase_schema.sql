@@ -43,11 +43,16 @@ CREATE TABLE public.tickets (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   room_number TEXT,
+  latitude NUMERIC(9, 6),
+  longitude NUMERIC(9, 6),
   priority ticket_priority NOT NULL DEFAULT 'Medium',
   status ticket_status NOT NULL DEFAULT 'Pending',
   photo_urls TEXT[],
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT tickets_coordinates_paired CHECK ((latitude IS NULL) = (longitude IS NULL)),
+  CONSTRAINT tickets_latitude_range CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  CONSTRAINT tickets_longitude_range CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180)
 );
 
 -- 5. ASSIGNMENTS TABLE

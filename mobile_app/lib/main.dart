@@ -77,6 +77,8 @@ class _Ticket {
     required this.status,
     required this.priority,
     required this.createdAt,
+    this.latitude,
+    this.longitude,
   });
 
   final String number;
@@ -85,6 +87,8 @@ class _Ticket {
   final String status;
   final String priority;
   final DateTime createdAt;
+  final double? latitude;
+  final double? longitude;
 
   factory _Ticket.fromJson(Map<String, dynamic> json) {
     final zone = json['zones'] as Map<String, dynamic>? ?? {};
@@ -95,6 +99,8 @@ class _Ticket {
       status: json['status'] as String? ?? 'Pending',
       priority: json['priority'] as String? ?? 'Medium',
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 }
@@ -114,6 +120,8 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   final _descriptionController = TextEditingController();
   final _blockController = TextEditingController();
   final _roomController = TextEditingController();
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
   final _imagePicker = ImagePicker();
   final List<_Ticket> _tickets = [];
 
@@ -144,6 +152,8 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
     _descriptionController.dispose();
     _blockController.dispose();
     _roomController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -153,7 +163,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
     try {
       final rows = await widget.client!
           .from('tickets')
-          .select('ticket_number,title,status,priority,created_at,zones(campus_name,block_name)')
+          .select('ticket_number,title,status,priority,created_at,latitude,longitude,zones(campus_name,block_name)')
           .eq('reporter_id', widget.client!.auth.currentUser!.id)
           .order('created_at', ascending: false);
       if (!mounted) return;
@@ -202,6 +212,8 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             status: 'Pending',
             priority: _priority,
             createdAt: DateTime.now(),
+            latitude: double.tryParse(_latitudeController.text.trim()),
+            longitude: double.tryParse(_longitudeController.text.trim()),
           ),
         );
       }
@@ -209,6 +221,8 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
       _descriptionController.clear();
       _blockController.clear();
       _roomController.clear();
+      _latitudeController.clear();
+      _longitudeController.clear();
       setState(() {
         _priority = 'Medium';
         _photo = null;
@@ -262,7 +276,21 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
       'priority': _priority,
       'photo_urls': photoPaths,
       'room_number': _roomController.text.trim().isEmpty ? null : _roomController.text.trim(),
+      'latitude': _latitudeController.text.trim().isEmpty ? null : double.parse(_latitudeController.text.trim()),
+      'longitude': _longitudeController.text.trim().isEmpty ? null : double.parse(_longitudeController.text.trim()),
     });
+  }
+
+  String? _validateCoordinate(String? value, String otherValue, double minimum, double maximum) {
+    final coordinate = value?.trim() ?? '';
+    final otherCoordinate = otherValue.trim();
+    if (coordinate.isEmpty && otherCoordinate.isEmpty) return null;
+    if (coordinate.isEmpty || otherCoordinate.isEmpty) return 'Enter both latitude and longitude';
+    final parsed = double.tryParse(coordinate);
+    if (parsed == null || !parsed.isFinite || parsed < minimum || parsed > maximum) {
+      return 'Enter a value between $minimum and $maximum';
+    }
+    return null;
   }
 
   Future<void> _showSignInDialog() async {
@@ -433,6 +461,32 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
           const SizedBox(height: 12),
           _label('Room or nearby landmark (optional)'),
           TextFormField(controller: _roomController, decoration: const InputDecoration(hintText: 'e.g. Room 204, east entrance')),
+          const SizedBox(height: 12),
+          _label('Map coordinates (optional)'),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _latitudeController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  decoration: const InputDecoration(labelText: 'Latitude', hintText: '11.59'),
+                  validator: (value) => _validateCoordinate(value, _longitudeController.text, -90, 90),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFormField(
+                  controller: _longitudeController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  decoration: const InputDecoration(labelText: 'Longitude', hintText: '37.39'),
+                  validator: (value) => _validateCoordinate(value, _latitudeController.text, -180, 180),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          const Text('Optional. Use only when the exact location is known; building and room remain the primary location.', style: TextStyle(color: Color(0xFF818C84), fontSize: 9)),
           const SizedBox(height: 20),
           const _SectionHeading(number: '02', title: 'Describe the problem'),
           const SizedBox(height: 11),
@@ -556,6 +610,10 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
         Text(ticket.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _ink)),
         const SizedBox(height: 5),
         Row(children: [const Icon(Icons.place_outlined, size: 13, color: Color(0xFF87928A)), const SizedBox(width: 3), Expanded(child: Text(ticket.location, style: const TextStyle(fontSize: 10, color: Color(0xFF87928A))))]),
+        if (ticket.latitude != null && ticket.longitude != null) ...[
+          const SizedBox(height: 6),
+          Row(children: [const Icon(Icons.map_outlined, size: 13, color: Color(0xFF87928A)), const SizedBox(width: 4), SelectableText('${ticket.latitude}, ${ticket.longitude}', style: const TextStyle(fontSize: 9, color: Color(0xFF68756C)))]),
+        ],
         const SizedBox(height: 9),
         Row(children: [Text('${ticket.priority} priority', style: const TextStyle(fontSize: 9, color: Color(0xFF737F76))), const Spacer(), Text('${ticket.createdAt.day}/${ticket.createdAt.month}/${ticket.createdAt.year}', style: const TextStyle(fontSize: 9, color: Color(0xFF929C94)))]),
       ]),

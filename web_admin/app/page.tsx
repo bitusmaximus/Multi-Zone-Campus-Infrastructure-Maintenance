@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Clock3,
   Filter,
+  Mail,
   MapPin,
   Search,
   Send,
@@ -23,7 +24,7 @@ import { AppTopbar } from '@/app/components/app-topbar';
 
 type TicketStatus = 'Pending' | 'Assigned' | 'In Progress' | 'Resolved';
 type Priority = 'Emergency' | 'High' | 'Medium' | 'Low';
-type Technician = { id: string; name: string };
+type Technician = { id: string; name: string; email: string; phone: string };
 
 type Ticket = {
   id: string;
@@ -38,6 +39,8 @@ type Ticket = {
   room: string;
   created_at: string;
   technician: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 const initialTickets: Ticket[] = [
@@ -49,10 +52,10 @@ const initialTickets: Ticket[] = [
 ];
 
 const demoTechnicians: Technician[] = [
-  { id: 'mekdes', name: 'Mekdes Tadesse' },
-  { id: 'abel', name: 'Abel Bekele' },
-  { id: 'sara', name: 'Sara Alemu' },
-  { id: 'dawit', name: 'Dawit Fikru' },
+  { id: 'mekdes', name: 'Mekdes Tadesse', email: 'mekdes.tadesse@example.edu', phone: '' },
+  { id: 'abel', name: 'Abel Bekele', email: 'abel.bekele@example.edu', phone: '' },
+  { id: 'sara', name: 'Sara Alemu', email: 'sara.alemu@example.edu', phone: '' },
+  { id: 'dawit', name: 'Dawit Fikru', email: 'dawit.fikru@example.edu', phone: '' },
 ];
 const statusOptions: TicketStatus[] = ['Pending', 'Assigned', 'In Progress', 'Resolved'];
 const priorityOptions: Priority[] = ['Emergency', 'High', 'Medium', 'Low'];
@@ -82,8 +85,8 @@ export default function DashboardPage() {
     const client = supabase;
     if (!client || !authenticated) return;
     const [{ data: rows, error }, { data: technicianRows, error: technicianError }, { data: assignmentRows, error: assignmentError }] = await Promise.all([
-      client.from('tickets').select('id,ticket_number,title,description,priority,status,room_number,created_at,zones(campus_name,category,block_name)').order('created_at', { ascending: false }),
-      client.from('profiles').select('id,full_name').eq('role', 'technician').order('full_name'),
+      client.from('tickets').select('id,ticket_number,title,description,priority,status,room_number,latitude,longitude,created_at,zones(campus_name,category,block_name)').order('created_at', { ascending: false }),
+      client.from('profiles').select('id,full_name,email,phone_number,department').eq('role', 'technician').order('full_name'),
       client.from('assignments').select('ticket_id,technician_id,assigned_at').order('assigned_at', { ascending: false }),
     ]);
     if (error || technicianError || assignmentError) {
@@ -112,10 +115,12 @@ export default function DashboardPage() {
         room: row.room_number ?? '',
         created_at: row.created_at,
         technician: assignmentNames.get(row.id) ?? '',
+        latitude: row.latitude === null ? null : Number(row.latitude),
+        longitude: row.longitude === null ? null : Number(row.longitude),
       };
     });
     setTickets(nextTickets);
-    setTechnicians((technicianRows ?? []).map((row) => ({ id: row.id, name: row.full_name })));
+    setTechnicians((technicianRows ?? []).map((row) => ({ id: row.id, name: row.full_name, email: row.email, phone: row.phone_number ?? '' })));
     setSelectedId((current) => nextTickets.some((ticket) => ticket.id === current) ? current : nextTickets[0]?.id ?? '');
     setSyncError('');
   };
@@ -255,6 +260,7 @@ export default function DashboardPage() {
   const emergencyCount = tickets.filter((ticket) => ticket.priority === 'Emergency' && ticket.status !== 'Resolved').length;
   const inProgressCount = tickets.filter((ticket) => ticket.status === 'In Progress').length;
   const resolvedCount = tickets.filter((ticket) => ticket.status === 'Resolved').length;
+  const selectedTechnician = selected ? technicians.find((technician) => technician.name === selected.technician) : undefined;
 
   return (
     <main className="app-shell">
@@ -289,10 +295,11 @@ export default function DashboardPage() {
                 <div className="detail-header"><span className="detail-kicker">REQUEST #{selected.ticket_number}</span><button className="close-detail" aria-label="Close details" onClick={() => setSelectedId('')}><X size={16} /></button></div>
                 <h3>{selected.title}</h3><div className="detail-meta"><span className={`status-pill status-${selected.status.toLowerCase().replaceAll(' ', '-')}`}>{selected.status}</span><span className="detail-date">Reported {formatTime(selected.created_at)}</span></div>
                 <div className="detail-divider" />
-                <div className="detail-group"><label>LOCATION</label><div className="location-detail"><MapPin size={15} /><div><strong>{selected.campus}</strong><span>{selected.category} <span>·</span> {selected.block}, {selected.room}</span></div></div></div>
+                <div className="detail-group"><label>LOCATION</label><div className="location-detail"><MapPin size={15} /><div><strong>{selected.campus}</strong><span>{selected.category} <span>·</span> {selected.block}{selected.room ? `, ${selected.room}` : ''}</span></div></div>{selected.latitude != null && selected.longitude != null && <a className="map-link" href={`https://www.google.com/maps/search/?api=1&query=${selected.latitude},${selected.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13} /> Open in Google Maps</a>}</div>
                 <div className="detail-group"><label>DESCRIPTION</label><p className="description-text">{selected.description}</p></div>
                 <div className="detail-fields"><label className="detail-group"><span>PRIORITY</span><select value={selected.priority} onChange={(event) => updateSelected({ priority: event.target.value as Priority })}>{priorityOptions.map((priority) => <option key={priority}>{priority}</option>)}</select></label><label className="detail-group"><span>STATUS</span><select value={selected.status} onChange={(event) => updateSelected({ status: event.target.value as TicketStatus })}>{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label></div>
                 <div className="detail-group"><label htmlFor="technician">ASSIGN TECHNICIAN</label><div className="select-wrap"><select id="technician" value={selected.technician} onChange={(event) => updateSelected({ technician: event.target.value, status: event.target.value && selected.status === 'Pending' ? 'Assigned' : selected.status })}><option value="">Select a technician</option>{technicians.map((technician) => <option key={technician.id} value={technician.name}>{technician.name}</option>)}</select><ChevronDown size={15} /></div></div>
+                {selectedTechnician?.email && <a className="contact-link" href={`mailto:${selectedTechnician.email}?subject=${encodeURIComponent(`Campus dispatch request #${selected.ticket_number}`)}&body=${encodeURIComponent(`${selected.title}\n${selected.campus} · ${selected.block}${selected.room ? ` · ${selected.room}` : ''}\nPriority: ${selected.priority}\nStatus: ${selected.status}`)}`}><Mail size={14} /> Email {selectedTechnician.name}</a>}
                 <div className="detail-footer"><button className={`assign-button ${saved ? 'saved' : ''}`} onClick={() => void saveChanges()} disabled={isSaving || (isSupabaseConfigured && !isAuthenticated)}>{isSaving ? <Activity size={15} /> : saved ? <Check size={15} /> : <Send size={15} />}{isSaving ? 'Saving...' : saved ? 'Changes saved' : 'Save dispatch changes'}</button><span>{isSupabaseConfigured && isAuthenticated ? 'Changes are saved to Supabase.' : isSupabaseConfigured ? 'Sign in to save changes.' : 'Changes are stored in this demo session.'}</span></div>
               </aside>}
             </div>
