@@ -24,7 +24,7 @@ From `mobile_app`, run `flutter pub get`, then start the app with:
 flutter run --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
-Without those Dart defines, the app uses an in-memory demo mode. Supabase mode requires an existing signed-in account; the app supports email/password sign-in and reads only the signed-in user's requests.
+Without those Dart defines, the app uses an in-memory demo mode. Students can register directly within the mobile app or sign in with an existing university account. The app reads and tracks only the signed-in user's requests.
 Coordinates are optional and entered only when known; campus, zone, building, and room remain the primary location. The admin portal opens a supplied coordinate in Google Maps without requiring a Maps API key. Technician email links open the user's configured mail app; automated email delivery is not included.
 
 ### 3. Next.js Dispatcher Portal
