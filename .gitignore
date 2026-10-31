@@ -1,0 +1,21 @@
+# Flutter and Dart
+mobile_app/.dart_tool/
+mobile_app/build/
+mobile_app/.flutter-plugins
+mobile_app/.flutter-plugins-dependencies
+mobile_app/.packages
+mobile_app/android/local.properties
+mobile_app/ios/Flutter/.last_build_id
+
+# Next.js and Node
+web_admin/node_modules/
+web_admin/.next/
+web_admin/out/
+web_admin/tsconfig.tsbuildinfo
+web_admin/.env.local
+web_admin/.env.*.local
+npm-debug.log*
+
+# Local editor and operating system files
+.DS_Store
+Thumbs.db
