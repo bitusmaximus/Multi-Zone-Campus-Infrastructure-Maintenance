@@ -17,6 +17,11 @@ This repository contains the complete source code for the Multi-Zone Campus Infr
 4. Create Auth users for residents, dispatchers, and technicians, then add a matching `public.profiles` row for each user. Set each technician's `department`, `email`, and optional `phone_number`; dispatcher pages use these fields for trade and contact actions.
 5. The schema creates the private `hazard-photos` bucket and upload/read policies.
 
+#### University Email Verification (OTP)
+The mobile app only accepts `@bdu.edu.et` emails and verifies them with a 6-digit OTP code.
+To make Supabase send that code via BDU's own mail server, follow **[backend/SUPABASE_SMTP_SETUP.md](backend/SUPABASE_SMTP_SETUP.md)**.
+TL;DR: Supabase Dashboard → Project Settings → Authentication → SMTP Settings → enable Custom SMTP → enter `mail.bdu.edu.et` credentials from IT.
+
 ### 2. Flutter Mobile App
 From `mobile_app`, run `flutter pub get`, then start the app with:
 
