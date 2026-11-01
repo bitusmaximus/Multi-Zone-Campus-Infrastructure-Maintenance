@@ -292,7 +292,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
           ..addAll((rows as List).map((row) => _Ticket.fromJson(row as Map<String, dynamic>)));
       });
     } catch (error) {
-      _showMessage('Telemetry retrieval failed: $error');
+      _showMessage('Failed to load reports: $error');
     } finally {
       if (mounted) setState(() => _loadingTickets = false);
     }
@@ -311,7 +311,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isConnected && !_isSignedIn) {
-      _showMessage('Authorize with your BDU Astro Voyager credentials (@bdu.edu.et) first.');
+      _showMessage('Please sign in with your @bdu.edu.et account first.');
       await _showAuthDialog(initialRegister: false);
       return;
     }
@@ -347,11 +347,11 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
         _photo = null;
         _photoBytes = null;
       });
-      _showMessage(_isConnected ? 'Telemetry transmitted to Orbital Dispatch Command.' : 'Demo log recorded to Voyager telemetry deck.');
+      _showMessage(_isConnected ? 'Report submitted successfully.' : 'Report saved (demo mode).');
       setState(() => _tabIndex = 1);
       if (_isConnected) await _loadTickets();
     } catch (error) {
-      _showMessage('Transmission failed: $error');
+      _showMessage('Submission failed: $error');
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -372,7 +372,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
         ? await zoneQuery.isFilter('room_number', null).maybeSingle()
         : await zoneQuery.eq('room_number', roomNumber).maybeSingle();
     if (zoneRow == null) {
-      throw Exception('Coordinates not registered on campus orbital grid. Dispatcher must initialize sector first.');
+      throw Exception('Zone not found. The dispatcher must register this block/zone first.');
     }
 
     final photoPaths = <String>[];
@@ -405,7 +405,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
     final coordinate = value?.trim() ?? '';
     final otherCoordinate = otherValue.trim();
     if (coordinate.isEmpty && otherCoordinate.isEmpty) return null;
-    if (coordinate.isEmpty || otherCoordinate.isEmpty) return 'Enter both planetary latitude and longitude';
+    if (coordinate.isEmpty || otherCoordinate.isEmpty) return 'Enter both latitude and longitude';
     final parsed = double.tryParse(coordinate);
     if (parsed == null || !parsed.isFinite || parsed < minimum || parsed > maximum) {
       return 'Coordinate out of range ($minimum to $maximum)';
@@ -497,7 +497,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _starlight),
                         ),
                         Text(
-                          _currentUserEmail ?? 'No frequency link',
+                          _currentUserEmail ?? 'No email linked',
                           style: const TextStyle(fontSize: 12, color: _stardust),
                         ),
                       ],
@@ -516,7 +516,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                         Icon(Icons.satellite_alt_rounded, size: 12, color: _cyanPulsar),
                         SizedBox(width: 4),
                         Text(
-                          'VOYAGER',
+                          'STUDENT',
                           style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cyanPulsar, letterSpacing: 0.8),
                         ),
                       ],
@@ -538,7 +538,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Verified Bahir Dar University Orbit Credentials (@bdu.edu.et)',
+                        'Verified BDU University Account (@bdu.edu.et)',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _starlight),
                       ),
                     ),
@@ -568,7 +568,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                   const Icon(Icons.radar_rounded, size: 18, color: _cyanGlow),
                   const SizedBox(width: 10),
                   Text(
-                    _isConnected ? 'Connected to BDU Orbital Supabase Node' : 'Simulated Flight Deck (Demo Mode)',
+                    _isConnected ? 'Connected to Supabase' : 'Running in Demo Mode',
                     style: const TextStyle(fontSize: 13, color: _stardust),
                   ),
                 ],
@@ -586,10 +586,10 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                       _demoStudentDepartment = null;
                     });
                   }
-                  _showMessage('Disengaged session telemetry.');
+                  _showMessage('Signed out.');
                 },
                 icon: const Icon(Icons.power_settings_new_rounded, size: 18),
-                label: const Text('Disengage / Sign Out'),
+                label: const Text('Sign Out'),
                 style: FilledButton.styleFrom(
                   backgroundColor: _supernova.withValues(alpha: 0.2),
                   foregroundColor: const Color(0xFFFCA5A5),
@@ -744,6 +744,64 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   }
 
   Widget _buildReportView() {
+    // Gate: if not signed in, show login prompt instead of the full form
+    if (!_isSignedIn) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: _cyanPulsar.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _cyanPulsar.withValues(alpha: 0.4)),
+                ),
+                child: const Icon(Icons.lock_outline_rounded, size: 32, color: _cyanPulsar),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Sign In Required',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _starlight),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'You must sign in with your official @bdu.edu.et university email to submit a maintenance report.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: _stardust, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              FilledButton.icon(
+                onPressed: () => _showAuthDialog(initialRegister: false),
+                icon: const Icon(Icons.login_rounded, size: 18),
+                label: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.w800)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _cyanPulsar,
+                  foregroundColor: _spaceVoid,
+                  minimumSize: const Size(200, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _showAuthDialog(initialRegister: true),
+                icon: const Icon(Icons.person_add_rounded, size: 18, color: _cyanPulsar),
+                label: const Text('Create Account', style: TextStyle(color: _cyanPulsar, fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(200, 48),
+                  side: const BorderSide(color: _cyanPulsar),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Form(
       key: _formKey,
       child: ListView(
@@ -776,66 +834,30 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                         borderRadius: BorderRadius.circular(5),
                         border: Border.all(color: _cyanPulsar.withValues(alpha: 0.4)),
                       ),
-                      child: const Text('ASTRO MISSION CONTROL', style: TextStyle(color: _cyanPulsar, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
+                      child: const Text('BDU CAMPUS MAINTENANCE', style: TextStyle(color: _cyanPulsar, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
                     ),
                     const Spacer(),
                     const Icon(Icons.blur_on_rounded, size: 18, color: _cyanPulsar),
                   ],
                 ),
                 const SizedBox(height: 10),
-                const Text('Infrastructure Telemetry', style: TextStyle(color: _starlight, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 0.4)),
+                const Text('Report an Issue', style: TextStyle(color: _starlight, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 0.4)),
                 const SizedBox(height: 5),
-                const Text('Detect campus sector anomalies, transmit coordinates & deploy repair squadrons.', style: TextStyle(color: _stardust, fontSize: 11, height: 1.4)),
+                const Text('Report a campus maintenance or infrastructure issue to dispatch technicians.', style: TextStyle(color: _stardust, fontSize: 11, height: 1.4)),
               ],
             ),
           ),
-          if (!_isSignedIn) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: _spaceSurface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _solarFlare.withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.lock_clock_outlined, size: 20, color: _solarFlare),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _isConnected
-                          ? 'Bahir Dar University only: Sign in or register with your @bdu.edu.et email.'
-                          : 'Voyager demo mode active. Register or sign in with your @bdu.edu.et address.',
-                      style: const TextStyle(fontSize: 11, color: _starlight, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () => _showAuthDialog(initialRegister: true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _cyanPulsar,
-                      foregroundColor: _spaceVoid,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    child: const Text('Register', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 22),
 
           // Section 01
           Row(
             children: [
-              const Expanded(child: _SectionHeading(number: '01', title: 'Sector & Location Telemetry')),
+              const Expanded(child: _SectionHeading(number: '01', title: 'Location')),
               if (!_isConnected) const _DemoTag(),
             ],
           ),
           const SizedBox(height: 12),
-          _label('Campus Planetary Sector'),
+          _label('Campus'),
           DropdownButtonFormField<String>(
             initialValue: _campus,
             dropdownColor: _spaceSurface,
@@ -844,7 +866,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             onChanged: (value) => setState(() => _campus = value ?? _campus),
           ),
           const SizedBox(height: 12),
-          _label('Zone Classification'),
+          _label('Zone'),
           DropdownButtonFormField<String>(
             initialValue: _zone,
             dropdownColor: _spaceSurface,
@@ -853,23 +875,23 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             onChanged: (value) => setState(() => _zone = value ?? _zone),
           ),
           const SizedBox(height: 12),
-          _label('Station Block or Structure'),
+          _label('Block / Building'),
           TextFormField(
             controller: _blockController,
             style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'e.g. Block C-9, BIT Lab Wing 2'),
-            validator: (value) => value == null || value.trim().isEmpty ? 'Identify the target station or block' : null,
+            decoration: const InputDecoration(hintText: 'e.g. Block C, Engineering Building'),
+            validator: (value) => value == null || value.trim().isEmpty ? 'Enter block or building name' : null,
           ),
           const SizedBox(height: 12),
-          _label('Bay / Room or Landmark (Optional)'),
+          _label('Room (Optional)'),
           TextFormField(
             controller: _roomController,
             style: const TextStyle(color: _starlight),
-            decoration: const InputDecoration(hintText: 'e.g. Hydro-Lab 204, East Airlock Entry'),
+            decoration: const InputDecoration(hintText: 'e.g. Room 204, Ground floor east'),
           ),
           const SizedBox(height: 12),
-          _label('Orbital GPS Coordinates (Optional)'),
+          _label('GPS Coordinates (Optional)'),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -895,34 +917,34 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             ],
           ),
           const SizedBox(height: 5),
-          const Text('Planetary coordinates assist ground technician routing. Primary dispatch uses block & bay.', style: TextStyle(color: _starDim, fontSize: 9)),
+          const Text('GPS coordinates help technicians locate the issue. Block and room are the primary location.', style: TextStyle(color: _starDim, fontSize: 9)),
           const SizedBox(height: 22),
 
           // Section 02
-          const _SectionHeading(number: '02', title: 'Anomaly Log & Diagnostics'),
+          const _SectionHeading(number: '02', title: 'Issue Details'),
           const SizedBox(height: 12),
-          _label('Incident Briefing (Summary)'),
+          _label('Issue Title'),
           TextFormField(
             controller: _titleController,
             style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.sentences,
             maxLength: 90,
-            decoration: const InputDecoration(hintText: 'e.g. Hydro pipe failure in sector corridor', counterText: ''),
-            validator: (value) => value == null || value.trim().length < 4 ? 'Provide a brief summary of the anomaly' : null,
+            decoration: const InputDecoration(hintText: 'e.g. Broken pipe in corridor', counterText: ''),
+            validator: (value) => value == null || value.trim().length < 4 ? 'Provide a brief title for the issue' : null,
           ),
           const SizedBox(height: 12),
-          _label('Telemetry Diagnostic Details'),
+          _label('Description'),
           TextFormField(
             controller: _descriptionController,
             style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.sentences,
             minLines: 3,
             maxLines: 5,
-            decoration: const InputDecoration(hintText: 'Provide detailed sensor readings or visual observations for dispatch technicians.'),
-            validator: (value) => value == null || value.trim().length < 10 ? 'Provide diagnostic detail (min 10 characters)' : null,
+            decoration: const InputDecoration(hintText: 'Describe the issue clearly so technicians can understand and fix it.'),
+            validator: (value) => value == null || value.trim().length < 10 ? 'Please provide more detail (min 10 characters)' : null,
           ),
           const SizedBox(height: 16),
-          _label('Urgency Protocol'),
+          _label('Priority'),
           Wrap(
             spacing: 8,
             children: _priorities.map((priority) {
@@ -954,7 +976,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
           OutlinedButton.icon(
             onPressed: _choosePhoto,
             icon: Icon(_photo == null ? Icons.camera_alt_outlined : Icons.check_circle_rounded, size: 17, color: _cyanPulsar),
-            label: Text(_photo == null ? 'Attach Optical Telemetry (Photo)' : _photo!.name),
+            label: Text(_photo == null ? 'Attach Photo' : _photo!.name),
             style: OutlinedButton.styleFrom(
               alignment: Alignment.centerLeft,
               foregroundColor: _starlight,
@@ -983,7 +1005,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             icon: _sending
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _spaceVoid))
                 : const Icon(Icons.send_rounded, size: 18),
-            label: Text(_sending ? 'Transmitting Telemetry...' : 'Transmit Maintenance Report'),
+            label: Text(_sending ? 'Submitting...' : 'Submit Report'),
             style: FilledButton.styleFrom(
               backgroundColor: _cyanPulsar,
               foregroundColor: _spaceVoid,
@@ -993,7 +1015,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          const Text('Severe hazards should also be signaled to Campus Security Command frequencies.', textAlign: TextAlign.center, style: TextStyle(color: _starDim, fontSize: 9)),
+          const Text('For urgent safety hazards, also contact Campus Security directly.', textAlign: TextAlign.center, style: TextStyle(color: _starDim, fontSize: 9)),
         ],
       ),
     );
@@ -1013,7 +1035,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Telemetry Log', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _starlight)),
+                    const Text('My Reports', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _starlight)),
                     const SizedBox(height: 5),
                     Text(
                       _isSignedIn
@@ -1026,7 +1048,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               ),
               if (_isSignedIn)
                 IconButton(
-                  tooltip: 'Rescan Telemetry',
+                  tooltip: 'Refresh',
                   onPressed: _loadTickets,
                   icon: const Icon(Icons.refresh_rounded, size: 20, color: _cyanPulsar),
                 ),
@@ -1105,14 +1127,14 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               child: Column(children: [
                 const Icon(Icons.radar_rounded, size: 36, color: _cyanGlow),
                 const SizedBox(height: 10),
-                const Text('No Active Transmissions', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _starlight)),
+                const Text('No Reports Yet', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _starlight)),
                 const SizedBox(height: 4),
-                const Text('Your dispatched maintenance reports will beam in here.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: _stardust)),
+                const Text('Your submitted reports will appear here.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: _stardust)),
                 const SizedBox(height: 14),
                 TextButton.icon(
                   onPressed: () => setState(() => _tabIndex = 0),
                   icon: const Icon(Icons.add_rounded, size: 16, color: _cyanPulsar),
-                  label: const Text('Initiate new report', style: TextStyle(color: _cyanPulsar, fontWeight: FontWeight.w700)),
+                  label: const Text('Submit a new report', style: TextStyle(color: _cyanPulsar, fontWeight: FontWeight.w700)),
                 ),
               ]),
             )
@@ -1287,7 +1309,7 @@ class _AuthDialogState extends State<_AuthDialog> {
         );
         if (mounted) Navigator.pop(context);
         widget.onAuthSuccess();
-        widget.showMessage('Flight deck authorization granted.');
+        widget.showMessage('Signed in successfully.');
       } else {
         // Local demo mode sign in
         widget.onDemoAuthSuccess(
@@ -1296,7 +1318,7 @@ class _AuthDialogState extends State<_AuthDialog> {
           department: 'Engineering Flight Division',
         );
         if (mounted) Navigator.pop(context);
-        widget.showMessage('Authorized as demo voyager ($email).');
+        widget.showMessage('Signed in as demo user ($email).');
       }
     } catch (error) {
       if (mounted) {
@@ -1354,7 +1376,7 @@ class _AuthDialogState extends State<_AuthDialog> {
         if (res.session != null) {
           if (mounted) Navigator.pop(context);
           widget.onAuthSuccess();
-          widget.showMessage('Welcome aboard, Voyager $fullName!');
+          widget.showMessage('Welcome, $fullName!');
         } else {
           setState(() {
             _isVerifying = true;
@@ -1363,7 +1385,7 @@ class _AuthDialogState extends State<_AuthDialog> {
             _pendingDepartment = department;
             _pendingPhone = phone;
           });
-          widget.showMessage('Transmission beacon sent to $email.');
+          widget.showMessage('Verification code sent to $email. Check your BDU inbox.');
         }
       } else {
         setState(() {
@@ -1417,7 +1439,7 @@ class _AuthDialogState extends State<_AuthDialog> {
 
         if (mounted) Navigator.pop(context);
         widget.onAuthSuccess();
-        widget.showMessage('Frequency verified! Welcome aboard, $_pendingFullName.');
+        widget.showMessage('Email verified! Welcome, $_pendingFullName.');
       } else {
         widget.onDemoAuthSuccess(
           name: _pendingFullName,
@@ -1425,7 +1447,7 @@ class _AuthDialogState extends State<_AuthDialog> {
           department: _pendingDepartment,
         );
         if (mounted) Navigator.pop(context);
-        widget.showMessage('Demo frequency verified! Signed in as $_pendingFullName.');
+        widget.showMessage('Demo verified! Signed in as $_pendingFullName.');
       }
     } catch (error) {
       if (mounted) {
@@ -1447,7 +1469,7 @@ class _AuthDialogState extends State<_AuthDialog> {
       if (widget.client != null) {
         await widget.client!.auth.resend(type: OtpType.signup, email: _pendingVerifyEmail);
       }
-      widget.showMessage('Transmission code resent to $_pendingVerifyEmail.');
+      widget.showMessage('Verification code resent to $_pendingVerifyEmail.');
     } catch (error) {
       widget.showMessage('Failed to resend code: $error');
     }
@@ -1507,7 +1529,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                           _isVerifying
                               ? 'Enter the 6-digit code sent to your BDU inbox'
                               : (_isRegister
-                                  ? 'Astro Voyage // Bahir Dar University Orbit'
+                                  ? 'BDU Campus Maintenance — Bahir Dar University'
                                   : 'Sign in with your verified BDU credentials'),
                           style: const TextStyle(fontSize: 10, color: _stardust),
                         ),
@@ -1882,7 +1904,7 @@ class _AuthDialogState extends State<_AuthDialog> {
               children: [
                 const Icon(Icons.mark_email_read_rounded, size: 40, color: _cyanPulsar),
                 const SizedBox(height: 8),
-                const Text('Transmission Beacon Sent To:', style: TextStyle(fontSize: 11, color: _stardust)),
+                const Text('Verification Code Sent To:', style: TextStyle(fontSize: 11, color: _stardust)),
                 const SizedBox(height: 3),
                 Text(
                   _pendingVerifyEmail,
@@ -1890,7 +1912,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Check your university inbox or junk mail folder for your 6-digit confirmation code.',
+                  'Check your @bdu.edu.et inbox (or spam folder) for the 6-digit code.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 10, color: _stardust, height: 1.4),
                 ),
@@ -2001,7 +2023,7 @@ class _DemoTag extends StatelessWidget {
         border: Border.all(color: _cyanPulsar.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Text('ASTRO DEMO', style: TextStyle(fontSize: 8, letterSpacing: 0.8, fontWeight: FontWeight.w800, color: _cyanPulsar)),
+      child: const Text('DEMO MODE', style: TextStyle(fontSize: 8, letterSpacing: 0.8, fontWeight: FontWeight.w800, color: _cyanPulsar)),
     );
   }
 }
