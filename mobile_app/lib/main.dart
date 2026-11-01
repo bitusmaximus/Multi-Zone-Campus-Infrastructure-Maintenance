@@ -1527,9 +1527,9 @@ class _AuthDialogState extends State<_AuthDialog> {
                         ),
                         Text(
                           _isVerifying
-                              ? 'Enter the 6-digit code sent to your BDU inbox'
+                              ? 'Step 2 of 2: Enter code sent to your BDU inbox'
                               : (_isRegister
-                                  ? 'BDU Campus Maintenance — Bahir Dar University'
+                                  ? 'Step 1 of 2: Account setup with @bdu.edu.et'
                                   : 'Sign in with your verified BDU credentials'),
                           style: const TextStyle(fontSize: 10, color: _stardust),
                         ),
@@ -1543,6 +1543,12 @@ class _AuthDialogState extends State<_AuthDialog> {
                 ],
               ),
               const SizedBox(height: 18),
+
+              // Step indicator for Registration & Verification flow
+              if (_isRegister || _isVerifying) ...[
+                _buildStepProgress(),
+                const SizedBox(height: 16),
+              ],
 
               // Segmented Tab Toggle
               if (!_isVerifying) ...[
@@ -1692,6 +1698,87 @@ class _AuthDialogState extends State<_AuthDialog> {
     );
   }
 
+  Widget _buildStepProgress() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: _spaceVoid,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _spaceBorder),
+      ),
+      child: Row(
+        children: [
+          _buildStepItem(
+            step: '1',
+            label: 'Account Details',
+            isActive: !_isVerifying,
+            isDone: _isVerifying,
+          ),
+          Expanded(
+            child: Container(
+              height: 2,
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+              color: _isVerifying ? _cyanPulsar : _spaceBorder,
+            ),
+          ),
+          _buildStepItem(
+            step: '2',
+            label: 'Email OTP',
+            isActive: _isVerifying,
+            isDone: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepItem({
+    required String step,
+    required String label,
+    required bool isActive,
+    required bool isDone,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDone
+                ? _cyanPulsar
+                : (isActive ? _cyanPulsar.withValues(alpha: 0.18) : _spaceSurface),
+            border: Border.all(
+              color: (isActive || isDone) ? _cyanPulsar : _spaceBorder,
+              width: 1.5,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: isDone
+              ? const Icon(Icons.check, size: 13, color: _spaceVoid)
+              : Text(
+                  step,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: isActive ? _cyanPulsar : _starDim,
+                  ),
+                ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: (isActive || isDone) ? FontWeight.w700 : FontWeight.w500,
+            color: (isActive || isDone) ? _starlight : _starDim,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildRegisterForm() {
     return Form(
       key: _registerFormKey,
@@ -1699,11 +1786,11 @@ class _AuthDialogState extends State<_AuthDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: _cyanPulsar.withValues(alpha: 0.1),
+              color: _cyanPulsar.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _cyanPulsar.withValues(alpha: 0.35)),
+              border: Border.all(color: _cyanPulsar.withValues(alpha: 0.25)),
             ),
             child: const Row(
               children: [
@@ -1718,25 +1805,7 @@ class _AuthDialogState extends State<_AuthDialog> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-
-          _fieldLabel('Full Name'),
-          TextFormField(
-            controller: _fullNameController,
-            style: const TextStyle(color: _starlight),
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              hintText: 'e.g. Abebe Kebede',
-              prefixIcon: Icon(Icons.person_outline_rounded, size: 18, color: _cyanGlow),
-            ),
-            validator: (value) {
-              if (value == null || value.trim().length < 3) {
-                return 'Please enter your full name (at least 3 characters)';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           _fieldLabel('Official University Email (@bdu.edu.et)'),
           TextFormField(
@@ -1759,29 +1828,21 @@ class _AuthDialogState extends State<_AuthDialog> {
           ),
           const SizedBox(height: 12),
 
-          _fieldLabel('Department / Faculty'),
+          _fieldLabel('Full Name'),
           TextFormField(
-            controller: _departmentController,
+            controller: _fullNameController,
             style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(
-              hintText: 'e.g. Software Engineering, Medicine, Civil',
-              prefixIcon: Icon(Icons.school_outlined, size: 18, color: _cyanGlow),
+              hintText: 'e.g. Abebe Kebede',
+              prefixIcon: Icon(Icons.person_outline_rounded, size: 18, color: _cyanGlow),
             ),
-            validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Enter your department or faculty' : null,
-          ),
-          const SizedBox(height: 12),
-
-          _fieldLabel('Phone Number (Optional)'),
-          TextFormField(
-            controller: _phoneController,
-            style: const TextStyle(color: _starlight),
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              hintText: 'e.g. 0911234567 or +251911234567',
-              prefixIcon: Icon(Icons.phone_outlined, size: 18, color: _cyanGlow),
-            ),
+            validator: (value) {
+              if (value == null || value.trim().length < 3) {
+                return 'Please enter your full name (at least 3 characters)';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
 
@@ -1835,32 +1896,26 @@ class _AuthDialogState extends State<_AuthDialog> {
               return null;
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: _nebulaIndigo.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _nebulaIndigo.withValues(alpha: 0.35)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.badge_outlined, size: 16, color: _cyanPulsar),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Role: Student (Campus Maintenance Reporter)',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _starlight),
-                  ),
-                ),
-              ],
+          _fieldLabel('Department / Faculty (Optional)'),
+          TextFormField(
+            controller: _departmentController,
+            style: const TextStyle(color: _starlight),
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              hintText: 'e.g. Software Engineering, Medicine',
+              prefixIcon: Icon(Icons.school_outlined, size: 18, color: _cyanGlow),
             ),
           ),
           const SizedBox(height: 20),
 
-          FilledButton(
+          FilledButton.icon(
             onPressed: _loading ? null : _handleRegister,
+            icon: _loading
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _spaceVoid))
+                : const Icon(Icons.arrow_forward_rounded, size: 18),
+            label: const Text('Create Student Account'),
             style: FilledButton.styleFrom(
               backgroundColor: _cyanPulsar,
               foregroundColor: _spaceVoid,
@@ -1868,9 +1923,6 @@ class _AuthDialogState extends State<_AuthDialog> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               textStyle: const TextStyle(fontWeight: FontWeight.w900),
             ),
-            child: _loading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _spaceVoid))
-                : const Text('Create Student Account'),
           ),
           const SizedBox(height: 12),
           Center(
@@ -1896,25 +1948,50 @@ class _AuthDialogState extends State<_AuthDialog> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _spaceSurface,
+              color: _spaceVoid,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _cyanPulsar.withValues(alpha: 0.4)),
+              border: Border.all(color: _cyanPulsar.withValues(alpha: 0.35)),
             ),
             child: Column(
               children: [
-                const Icon(Icons.mark_email_read_rounded, size: 40, color: _cyanPulsar),
-                const SizedBox(height: 8),
-                const Text('Verification Code Sent To:', style: TextStyle(fontSize: 11, color: _stardust)),
-                const SizedBox(height: 3),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _cyanPulsar.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.mark_email_read_rounded, size: 24, color: _cyanPulsar),
+                ),
+                const SizedBox(height: 10),
+                const Text('Verification Code Sent To', style: TextStyle(fontSize: 11, color: _stardust)),
+                const SizedBox(height: 4),
                 Text(
                   _pendingVerifyEmail,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _cyanPulsar),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _cyanPulsar),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Check your @bdu.edu.et inbox (or spam folder) for the 6-digit code.',
+                  'Check your Bahir Dar University inbox (or spam folder) for the 6-digit confirmation code.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 10, color: _stardust, height: 1.4),
+                  style: TextStyle(fontSize: 11, color: _stardust, height: 1.4),
+                ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () => setState(() => _isVerifying = false),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.edit_outlined, size: 12, color: _cyanPulsar),
+                        SizedBox(width: 4),
+                        Text('Wrong email? Change', style: TextStyle(fontSize: 11, color: _cyanPulsar, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1927,11 +2004,12 @@ class _AuthDialogState extends State<_AuthDialog> {
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             maxLength: 6,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 8, color: _cyanPulsar),
+            autofocus: true,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 10, color: _cyanPulsar),
             decoration: const InputDecoration(
               counterText: '',
               hintText: '123456',
-              hintStyle: TextStyle(fontSize: 20, letterSpacing: 8, color: _starDim),
+              hintStyle: TextStyle(fontSize: 22, letterSpacing: 10, color: _starDim),
             ),
             validator: (value) {
               if (value == null || value.trim().length != 6) {
@@ -1960,9 +2038,10 @@ class _AuthDialogState extends State<_AuthDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextButton(
+              TextButton.icon(
                 onPressed: () => setState(() => _isVerifying = false),
-                child: const Text('Change email', style: TextStyle(fontSize: 11, color: _stardust)),
+                icon: const Icon(Icons.arrow_back_rounded, size: 14, color: _stardust),
+                label: const Text('Back to details', style: TextStyle(fontSize: 11, color: _stardust)),
               ),
               TextButton.icon(
                 onPressed: _handleResendOTP,
