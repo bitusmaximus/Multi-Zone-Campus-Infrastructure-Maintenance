@@ -1527,7 +1527,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                         ),
                         Text(
                           _isVerifying
-                              ? 'Step 2 of 2: Enter code sent to your BDU inbox'
+                              ? 'Step 2 of 2: Enter code sent to your BDU Outlook inbox'
                               : (_isRegister
                                   ? 'Step 1 of 2: Account setup with @bdu.edu.et'
                                   : 'Sign in with your verified BDU credentials'),
@@ -1798,7 +1798,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'University Only: You must have an active @bdu.edu.et address to register.',
+                    'University Only: Requires an official BDU Outlook account (@bdu.edu.et). Validated via BDU email.',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _starlight),
                   ),
                 ),
@@ -1973,7 +1973,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Check your Bahir Dar University inbox (or spam folder) for the 6-digit confirmation code.',
+                  'Check your BDU Outlook inbox at outlook.office.com (or the Outlook mobile app) for the 6-digit code.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 11, color: _stardust, height: 1.4),
                 ),
