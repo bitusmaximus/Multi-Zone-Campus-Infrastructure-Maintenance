@@ -5,18 +5,31 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _campuses = [
-  'Poly / BIT Campus',
-  'Pedagogy Main Campus',
-  'Kebele 09 Health Science',
+  'Poly / BIT Campus (Sector Alpha)',
+  'Pedagogy Main Campus (Sector Prime)',
+  'Kebele 09 Health Science (Sector Nexus)',
 ];
 const _zones = ['Dorms', 'Classrooms', 'Labs', 'Grounds'];
 const _priorities = ['Low', 'Medium', 'High', 'Emergency'];
 
-const _green = Color(0xFF28553D);
-const _greenDark = Color(0xFF1D3F2D);
-const _greenLight = Color(0xFFE5EFE6);
-const _ink = Color(0xFF202A25);
-const _canvas = Color(0xFFF5F6F2);
+// Astro Voyage Design System
+const _spaceVoid = Color(0xFF070B14);      // Deep space abyssal background
+const _spaceSurface = Color(0xFF0D1527);   // Cosmic surface panels
+const _spaceCard = Color(0xFF121D36);      // Celestial cards
+const _spaceBorder = Color(0xFF223456);    // Constellation borders
+const _spaceBorderGlow = Color(0xFF2A4374);// Hover/active cosmic glow
+
+const _cyanPulsar = Color(0xFF00E5FF);     // Laser cyan / warp engine
+const _cyanGlow = Color(0xFF38BDF8);       // Pulsar cyan glow
+const _nebulaIndigo = Color(0xFF6366F1);   // Deep nebula indigo
+const _nebulaPurple = Color(0xFF8B5CF6);   // Cosmic stellar purple
+const _supernova = Color(0xFFEF4444);      // Alarm / Emergency supernova
+const _solarFlare = Color(0xFFF59E0B);     // Solar flare warning
+const _auroraEmerald = Color(0xFF10B981);  // Aurora green for resolved telemetry
+
+const _starlight = Color(0xFFF8FAFC);      // Bright starlight white
+const _stardust = Color(0xFF94A3B8);       // Cosmic slate
+const _starDim = Color(0xFF64748B);        // Muted interstellar grey
 
 /// Validates that an email belongs strictly to Bahir Dar University.
 bool _isUniversityEmail(String email) {
@@ -45,31 +58,64 @@ class BduDispatchApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ColorScheme.fromSeed(seedColor: _green);
     return MaterialApp(
-      title: 'BDU Campus Dispatch',
+      title: 'BDU Campus Dispatch - Astro Voyage',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: scheme,
-        scaffoldBackgroundColor: _canvas,
+        brightness: Brightness.dark,
+        colorScheme: const ColorScheme.dark(
+          primary: _cyanPulsar,
+          secondary: _nebulaIndigo,
+          surface: _spaceSurface,
+          onPrimary: Color(0xFF070B14),
+          onSecondary: Colors.white,
+          onSurface: _starlight,
+        ),
+        scaffoldBackgroundColor: _spaceVoid,
         appBarTheme: const AppBarTheme(
-          backgroundColor: _canvas,
-          foregroundColor: _ink,
+          backgroundColor: _spaceVoid,
+          foregroundColor: _starlight,
           surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xFF0A0F1D),
+          indicatorColor: _cyanPulsar.withValues(alpha: 0.16),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const IconThemeData(color: _cyanPulsar);
+            }
+            return const IconThemeData(color: _starDim);
+          }),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const TextStyle(color: _cyanPulsar, fontSize: 11, fontWeight: FontWeight.w700);
+            }
+            return const TextStyle(color: _starDim, fontSize: 11);
+          }),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
+          fillColor: _spaceSurface,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          hintStyle: const TextStyle(color: _starDim, fontSize: 13),
+          labelStyle: const TextStyle(color: _stardust, fontSize: 13),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE1E7E1)),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: _spaceBorder),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE1E7E1)),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: _spaceBorder),
           ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: _cyanPulsar, width: 1.5),
+          ),
+        ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: _spaceSurface,
         ),
       ),
       home: DispatchHomeScreen(client: client),
@@ -102,8 +148,8 @@ class _Ticket {
     final zone = json['zones'] as Map<String, dynamic>? ?? {};
     return _Ticket(
       number: '${json['ticket_number'] ?? '--'}',
-      title: json['title'] as String? ?? 'Maintenance request',
-      location: '${zone['campus_name'] ?? 'Campus'} / ${zone['block_name'] ?? ''}',
+      title: json['title'] as String? ?? 'Infrastructure telemetry',
+      location: '${zone['campus_name'] ?? 'Sector Alpha'} // ${zone['block_name'] ?? ''}',
       status: json['status'] as String? ?? 'Pending',
       priority: json['priority'] as String? ?? 'Medium',
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
@@ -160,7 +206,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
 
   String get _currentDisplayName {
     if (!_isConnected) {
-      return _demoStudentName ?? 'Demo Student';
+      return _demoStudentName ?? 'Astro Voyager';
     }
     if (_profileFullName != null && _profileFullName!.isNotEmpty) {
       return _profileFullName!;
@@ -169,7 +215,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
     if (metaName != null && metaName.isNotEmpty) {
       return metaName;
     }
-    return _currentUserEmail?.split('@').first ?? 'Student';
+    return _currentUserEmail?.split('@').first ?? 'Voyager';
   }
 
   String? get _currentDepartment => _isConnected
@@ -246,7 +292,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
           ..addAll((rows as List).map((row) => _Ticket.fromJson(row as Map<String, dynamic>)));
       });
     } catch (error) {
-      _showMessage('Could not load requests: $error');
+      _showMessage('Telemetry retrieval failed: $error');
     } finally {
       if (mounted) setState(() => _loadingTickets = false);
     }
@@ -265,7 +311,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isConnected && !_isSignedIn) {
-      _showMessage('Please sign in or register with your university email (@bdu.edu.et).');
+      _showMessage('Authorize with your BDU Astro Voyager credentials (@bdu.edu.et) first.');
       await _showAuthDialog(initialRegister: false);
       return;
     }
@@ -275,13 +321,13 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
       if (_isConnected) {
         await _submitToSupabase();
       } else {
-        final nextNumber = 1209 + _tickets.length;
+        final nextNumber = 2049 + _tickets.length;
         _tickets.insert(
           0,
           _Ticket(
             number: '$nextNumber',
             title: _titleController.text.trim(),
-            location: '$_campus / ${_blockController.text.trim()}',
+            location: '$_campus // ${_blockController.text.trim()}',
             status: 'Pending',
             priority: _priority,
             createdAt: DateTime.now(),
@@ -301,11 +347,11 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
         _photo = null;
         _photoBytes = null;
       });
-      _showMessage(_isConnected ? 'Report submitted to campus dispatch.' : 'Demo report added to your request list.');
+      _showMessage(_isConnected ? 'Telemetry transmitted to Orbital Dispatch Command.' : 'Demo log recorded to Voyager telemetry deck.');
       setState(() => _tabIndex = 1);
       if (_isConnected) await _loadTickets();
     } catch (error) {
-      _showMessage('Report could not be submitted: $error');
+      _showMessage('Transmission failed: $error');
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -314,10 +360,11 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   Future<void> _submitToSupabase() async {
     final client = widget.client!;
     final userId = client.auth.currentUser!.id;
+    final rawCampus = _campus.split(' (').first;
     final zoneQuery = client
         .from('zones')
         .select('id')
-        .eq('campus_name', _campus)
+        .eq('campus_name', rawCampus)
         .eq('category', _zone)
         .eq('block_name', _blockController.text.trim());
     final roomNumber = _roomController.text.trim();
@@ -325,7 +372,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
         ? await zoneQuery.isFilter('room_number', null).maybeSingle()
         : await zoneQuery.eq('room_number', roomNumber).maybeSingle();
     if (zoneRow == null) {
-      throw Exception('This campus zone is not registered. Ask a dispatcher to add it first.');
+      throw Exception('Coordinates not registered on campus orbital grid. Dispatcher must initialize sector first.');
     }
 
     final photoPaths = <String>[];
@@ -358,10 +405,10 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
     final coordinate = value?.trim() ?? '';
     final otherCoordinate = otherValue.trim();
     if (coordinate.isEmpty && otherCoordinate.isEmpty) return null;
-    if (coordinate.isEmpty || otherCoordinate.isEmpty) return 'Enter both latitude and longitude';
+    if (coordinate.isEmpty || otherCoordinate.isEmpty) return 'Enter both planetary latitude and longitude';
     final parsed = double.tryParse(coordinate);
     if (parsed == null || !parsed.isFinite || parsed < minimum || parsed > maximum) {
-      return 'Enter a value between $minimum and $maximum';
+      return 'Coordinate out of range ($minimum to $maximum)';
     }
     return null;
   }
@@ -392,9 +439,9 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   void _showAccountDetails() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _spaceSurface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) => SafeArea(
         child: Padding(
@@ -405,10 +452,10 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40,
+                  width: 44,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD3DCD4),
+                    color: _spaceBorderGlow,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -416,12 +463,28 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: _greenLight,
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [_cyanPulsar, _nebulaIndigo],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _cyanPulsar.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
                     child: Text(
-                      _currentDisplayName.isNotEmpty ? _currentDisplayName[0].toUpperCase() : 'S',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _green),
+                      _currentDisplayName.isNotEmpty ? _currentDisplayName[0].toUpperCase() : 'V',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _spaceVoid),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -431,59 +494,69 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                       children: [
                         Text(
                           _currentDisplayName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _starlight),
                         ),
                         Text(
-                          _currentUserEmail ?? 'No email',
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF7A867E)),
+                          _currentUserEmail ?? 'No frequency link',
+                          style: const TextStyle(fontSize: 12, color: _stardust),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: _greenLight,
-                      borderRadius: BorderRadius.circular(6),
+                      color: _cyanPulsar.withValues(alpha: 0.12),
+                      border: Border.all(color: _cyanPulsar.withValues(alpha: 0.4)),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'STUDENT',
-                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _green),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.satellite_alt_rounded, size: 12, color: _cyanPulsar),
+                        SizedBox(width: 4),
+                        Text(
+                          'VOYAGER',
+                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cyanPulsar, letterSpacing: 0.8),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE9F4EB),
-                  borderRadius: BorderRadius.circular(6),
+                  color: _nebulaIndigo.withValues(alpha: 0.15),
+                  border: Border.all(color: _nebulaIndigo.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.verified, size: 15, color: _green),
-                    SizedBox(width: 6),
-                    Text(
-                      'Official Bahir Dar University Email Verified',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _greenDark),
+                    Icon(Icons.verified, size: 16, color: _cyanPulsar),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Verified Bahir Dar University Orbit Credentials (@bdu.edu.et)',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _starlight),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              const Divider(color: Color(0xFFECEFEA)),
+              const Divider(color: _spaceBorder),
               const SizedBox(height: 12),
               if (_currentDepartment != null && _currentDepartment!.isNotEmpty) ...[
                 Row(
                   children: [
-                    const Icon(Icons.school_outlined, size: 18, color: Color(0xFF7E8A81)),
+                    const Icon(Icons.hub_outlined, size: 18, color: _cyanPulsar),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Department: $_currentDepartment',
-                        style: const TextStyle(fontSize: 13, color: _ink),
+                        'Division / Department: $_currentDepartment',
+                        style: const TextStyle(fontSize: 13, color: _starlight),
                       ),
                     ),
                   ],
@@ -492,11 +565,11 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               ],
               Row(
                 children: [
-                  const Icon(Icons.cloud_outlined, size: 18, color: Color(0xFF7E8A81)),
+                  const Icon(Icons.radar_rounded, size: 18, color: _cyanGlow),
                   const SizedBox(width: 10),
                   Text(
-                    _isConnected ? 'Connected to BDU Supabase Cloud' : 'Running in Local Demo Mode',
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF6F7C73)),
+                    _isConnected ? 'Connected to BDU Orbital Supabase Node' : 'Simulated Flight Deck (Demo Mode)',
+                    style: const TextStyle(fontSize: 13, color: _stardust),
                   ),
                 ],
               ),
@@ -513,15 +586,16 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                       _demoStudentDepartment = null;
                     });
                   }
-                  _showMessage('Signed out.');
+                  _showMessage('Disengaged session telemetry.');
                 },
-                icon: const Icon(Icons.logout_rounded, size: 17),
-                label: const Text('Sign out'),
+                icon: const Icon(Icons.power_settings_new_rounded, size: 18),
+                label: const Text('Disengage / Sign Out'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFC0473E),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(46),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  backgroundColor: _supernova.withValues(alpha: 0.2),
+                  foregroundColor: const Color(0xFFFCA5A5),
+                  side: const BorderSide(color: _supernova),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ],
@@ -535,7 +609,17 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message, style: const TextStyle(color: _starlight, fontWeight: FontWeight.w600)),
+          backgroundColor: _spaceCard,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: _cyanPulsar),
+          ),
+        ),
+      );
   }
 
   @override
@@ -546,17 +630,37 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
         title: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(color: _green, borderRadius: BorderRadius.circular(9)),
-              child: const Icon(Icons.handyman_outlined, color: Colors.white, size: 19),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [_cyanPulsar, _nebulaIndigo],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: _cyanPulsar.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.rocket_launch_rounded, color: _spaceVoid, size: 20),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('BDU Facilities', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
-                Text('CAMPUS DISPATCH', style: TextStyle(fontSize: 8, letterSpacing: 1.1, color: Color(0xFF7C887F))),
+                Row(
+                  children: [
+                    Text('BDU Facilities', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: _starlight)),
+                    SizedBox(width: 6),
+                    Text('// VOYAGER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cyanPulsar, letterSpacing: 1.2)),
+                  ],
+                ),
+                Text('CAMPUS DISPATCH', style: TextStyle(fontSize: 8, letterSpacing: 1.6, fontWeight: FontWeight.w700, color: _cyanGlow)),
               ],
             ),
           ],
@@ -569,24 +673,32 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: _greenLight,
+                  color: _spaceSurface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFCCE0CF)),
+                  border: Border.all(color: _cyanPulsar.withValues(alpha: 0.5)),
+                  boxShadow: [
+                    BoxShadow(color: _cyanPulsar.withValues(alpha: 0.15), blurRadius: 8),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 11,
-                      backgroundColor: _green,
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: [_cyanPulsar, _nebulaIndigo]),
+                      ),
+                      alignment: Alignment.center,
                       child: Text(
-                        _currentDisplayName.isNotEmpty ? _currentDisplayName[0].toUpperCase() : 'S',
-                        style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                        _currentDisplayName.isNotEmpty ? _currentDisplayName[0].toUpperCase() : 'V',
+                        style: const TextStyle(fontSize: 11, color: _spaceVoid, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                     Text(
                       _currentDisplayName,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _greenDark),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _cyanPulsar),
                     ),
                   ],
                 ),
@@ -595,11 +707,12 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
           else
             TextButton.icon(
               onPressed: () => _showAuthDialog(initialRegister: false),
-              icon: const Icon(Icons.login_rounded, size: 16),
-              label: const Text('Sign in / Register', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+              icon: const Icon(Icons.key_rounded, size: 15, color: _cyanPulsar),
+              label: const Text('Sign in / Register', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _cyanPulsar)),
               style: TextButton.styleFrom(
-                foregroundColor: _green,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                backgroundColor: _cyanPulsar.withValues(alpha: 0.1),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: _cyanPulsar.withValues(alpha: 0.3))),
               ),
             ),
           const SizedBox(width: 10),
@@ -615,8 +728,16 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
           if (index == 1) _loadTickets();
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: 'Report'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'My requests'),
+          NavigationDestination(
+            icon: Icon(Icons.radar_outlined),
+            selectedIcon: Icon(Icons.radar_rounded),
+            label: 'Report',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.satellite_alt_outlined),
+            selectedIcon: Icon(Icons.satellite_alt_rounded),
+            label: 'My requests',
+          ),
         ],
       ),
     );
@@ -628,94 +749,134 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
         children: [
+          // Astro Voyage Cosmic Command Hero
           Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(color: _green, borderRadius: BorderRadius.circular(12)),
-            child: const Column(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E1B4B), Color(0xFF0F172A), Color(0xFF08203E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _cyanPulsar.withValues(alpha: 0.35)),
+              boxShadow: [
+                BoxShadow(color: _cyanPulsar.withValues(alpha: 0.12), blurRadius: 16, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('CAMPUS CARE', style: TextStyle(color: Color(0xFFC9D8C8), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
-                SizedBox(height: 7),
-                Text('Something needs fixing?', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800)),
-                SizedBox(height: 5),
-                Text('Report it here. We will route it to the right team.', style: TextStyle(color: Color(0xFFE0E9E0), fontSize: 11)),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _cyanPulsar.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(color: _cyanPulsar.withValues(alpha: 0.4)),
+                      ),
+                      child: const Text('ASTRO MISSION CONTROL', style: TextStyle(color: _cyanPulsar, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.blur_on_rounded, size: 18, color: _cyanPulsar),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Text('Infrastructure Telemetry', style: TextStyle(color: _starlight, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 0.4)),
+                const SizedBox(height: 5),
+                const Text('Detect campus sector anomalies, transmit coordinates & deploy repair squadrons.', style: TextStyle(color: _stardust, fontSize: 11, height: 1.4)),
               ],
             ),
           ),
           if (!_isSignedIn) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF9E6),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFFE599)),
+                color: _spaceSurface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _solarFlare.withValues(alpha: 0.5)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.school, size: 20, color: Color(0xFF8A6D1C)),
+                  const Icon(Icons.lock_clock_outlined, size: 20, color: _solarFlare),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _isConnected
                           ? 'Bahir Dar University only: Sign in or register with your @bdu.edu.et email.'
-                          : 'Demo mode active. Register or sign in with your @bdu.edu.et address.',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF6B5314), fontWeight: FontWeight.w600),
+                          : 'Voyager demo mode active. Register or sign in with your @bdu.edu.et address.',
+                      style: const TextStyle(fontSize: 11, color: _starlight, fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  TextButton(
+                  FilledButton(
                     onPressed: () => _showAuthDialog(initialRegister: true),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _cyanPulsar,
+                      foregroundColor: _spaceVoid,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       visualDensity: VisualDensity.compact,
                     ),
-                    child: const Text('Register', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    child: const Text('Register', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                   ),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
+
+          // Section 01
           Row(
             children: [
-              const Expanded(child: _SectionHeading(number: '01', title: 'Where is the issue?')),
+              const Expanded(child: _SectionHeading(number: '01', title: 'Sector & Location Telemetry')),
               if (!_isConnected) const _DemoTag(),
             ],
           ),
-          const SizedBox(height: 11),
-          _label('Campus'),
+          const SizedBox(height: 12),
+          _label('Campus Planetary Sector'),
           DropdownButtonFormField<String>(
             initialValue: _campus,
+            dropdownColor: _spaceSurface,
+            style: const TextStyle(color: _starlight, fontSize: 13),
             items: _campuses.map((campus) => DropdownMenuItem(value: campus, child: Text(campus))).toList(),
             onChanged: (value) => setState(() => _campus = value ?? _campus),
           ),
           const SizedBox(height: 12),
-          _label('Zone type'),
+          _label('Zone Classification'),
           DropdownButtonFormField<String>(
             initialValue: _zone,
+            dropdownColor: _spaceSurface,
+            style: const TextStyle(color: _starlight, fontSize: 13),
             items: _zones.map((zone) => DropdownMenuItem(value: zone, child: Text(zone))).toList(),
             onChanged: (value) => setState(() => _zone = value ?? _zone),
           ),
           const SizedBox(height: 12),
-          _label('Block or building'),
+          _label('Station Block or Structure'),
           TextFormField(
             controller: _blockController,
+            style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'e.g. Block C, Engineering Lab 2'),
-            validator: (value) => value == null || value.trim().isEmpty ? 'Enter the block or building' : null,
+            decoration: const InputDecoration(hintText: 'e.g. Block C-9, BIT Lab Wing 2'),
+            validator: (value) => value == null || value.trim().isEmpty ? 'Identify the target station or block' : null,
           ),
           const SizedBox(height: 12),
-          _label('Room or nearby landmark (optional)'),
-          TextFormField(controller: _roomController, decoration: const InputDecoration(hintText: 'e.g. Room 204, east entrance')),
+          _label('Bay / Room or Landmark (Optional)'),
+          TextFormField(
+            controller: _roomController,
+            style: const TextStyle(color: _starlight),
+            decoration: const InputDecoration(hintText: 'e.g. Hydro-Lab 204, East Airlock Entry'),
+          ),
           const SizedBox(height: 12),
-          _label('Map coordinates (optional)'),
+          _label('Orbital GPS Coordinates (Optional)'),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: TextFormField(
                   controller: _latitudeController,
+                  style: const TextStyle(color: _starlight),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                   decoration: const InputDecoration(labelText: 'Latitude', hintText: '11.59'),
                   validator: (value) => _validateCoordinate(value, _longitudeController.text, -90, 90),
@@ -725,6 +886,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _longitudeController,
+                  style: const TextStyle(color: _starlight),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                   decoration: const InputDecoration(labelText: 'Longitude', hintText: '37.39'),
                   validator: (value) => _validateCoordinate(value, _latitudeController.text, -180, 180),
@@ -733,72 +895,105 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
             ],
           ),
           const SizedBox(height: 5),
-          const Text('Optional. Use only when the exact location is known; building and room remain the primary location.', style: TextStyle(color: Color(0xFF818C84), fontSize: 9)),
-          const SizedBox(height: 20),
-          const _SectionHeading(number: '02', title: 'Describe the problem'),
-          const SizedBox(height: 11),
-          _label('Short summary'),
+          const Text('Planetary coordinates assist ground technician routing. Primary dispatch uses block & bay.', style: TextStyle(color: _starDim, fontSize: 9)),
+          const SizedBox(height: 22),
+
+          // Section 02
+          const _SectionHeading(number: '02', title: 'Anomaly Log & Diagnostics'),
+          const SizedBox(height: 12),
+          _label('Incident Briefing (Summary)'),
           TextFormField(
             controller: _titleController,
+            style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.sentences,
             maxLength: 90,
-            decoration: const InputDecoration(hintText: 'e.g. Water leaking under sink', counterText: ''),
-            validator: (value) => value == null || value.trim().length < 4 ? 'Add a short, clear summary' : null,
+            decoration: const InputDecoration(hintText: 'e.g. Hydro pipe failure in sector corridor', counterText: ''),
+            validator: (value) => value == null || value.trim().length < 4 ? 'Provide a brief summary of the anomaly' : null,
           ),
           const SizedBox(height: 12),
-          _label('Details'),
+          _label('Telemetry Diagnostic Details'),
           TextFormField(
             controller: _descriptionController,
+            style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.sentences,
             minLines: 3,
             maxLines: 5,
-            decoration: const InputDecoration(hintText: 'What happened? Include any detail that helps the repair team.'),
-            validator: (value) => value == null || value.trim().length < 10 ? 'Add a few details about the issue' : null,
+            decoration: const InputDecoration(hintText: 'Provide detailed sensor readings or visual observations for dispatch technicians.'),
+            validator: (value) => value == null || value.trim().length < 10 ? 'Provide diagnostic detail (min 10 characters)' : null,
           ),
           const SizedBox(height: 16),
-          _label('Urgency'),
+          _label('Urgency Protocol'),
           Wrap(
             spacing: 8,
             children: _priorities.map((priority) {
               final selected = _priority == priority;
+              final chipColor = switch (priority) {
+                'Emergency' => _supernova,
+                'High' => _solarFlare,
+                'Medium' => _cyanPulsar,
+                _ => _nebulaPurple,
+              };
               return ChoiceChip(
                 label: Text(priority),
                 selected: selected,
                 onSelected: (_) => setState(() => _priority = priority),
                 showCheckmark: false,
-                labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: selected ? _green : const Color(0xFF68756C)),
-                side: BorderSide(color: selected ? const Color(0xFF94B49B) : const Color(0xFFE1E7E1)),
-                backgroundColor: Colors.white,
-                selectedColor: const Color(0xFFE5EFE6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+                labelStyle: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? _spaceVoid : _stardust,
+                ),
+                side: BorderSide(color: selected ? chipColor : _spaceBorder),
+                backgroundColor: _spaceSurface,
+                selectedColor: chipColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               );
             }).toList(),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: _choosePhoto,
-            icon: Icon(_photo == null ? Icons.add_a_photo_outlined : Icons.check_circle_outline, size: 17),
-            label: Text(_photo == null ? 'Attach a photo' : _photo!.name),
-            style: OutlinedButton.styleFrom(alignment: Alignment.centerLeft, foregroundColor: _green, side: const BorderSide(color: Color(0xFFD7E1D8)), padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13)),
+            icon: Icon(_photo == null ? Icons.camera_alt_outlined : Icons.check_circle_rounded, size: 17, color: _cyanPulsar),
+            label: Text(_photo == null ? 'Attach Optical Telemetry (Photo)' : _photo!.name),
+            style: OutlinedButton.styleFrom(
+              alignment: Alignment.centerLeft,
+              foregroundColor: _starlight,
+              backgroundColor: _spaceSurface,
+              side: const BorderSide(color: _spaceBorder),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
           if (_photo != null) ...[
-            const SizedBox(height: 9),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.memory(_photoBytes!, height: 150, width: double.infinity, fit: BoxFit.cover),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _cyanPulsar.withValues(alpha: 0.5)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.memory(_photoBytes!, height: 160, width: double.infinity, fit: BoxFit.cover),
+              ),
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: _sending ? null : _submitReport,
             icon: _sending
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.send_rounded, size: 17),
-            label: Text(_sending ? 'Submitting...' : 'Submit maintenance report'),
-            style: FilledButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(49), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _spaceVoid))
+                : const Icon(Icons.send_rounded, size: 18),
+            label: Text(_sending ? 'Transmitting Telemetry...' : 'Transmit Maintenance Report'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _cyanPulsar,
+              foregroundColor: _spaceVoid,
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+            ),
           ),
-          const SizedBox(height: 9),
-          const Text('Emergency hazards should also be reported directly to campus security.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF8A958D), fontSize: 9)),
+          const SizedBox(height: 10),
+          const Text('Severe hazards should also be signaled to Campus Security Command frequencies.', textAlign: TextAlign.center, style: TextStyle(color: _starDim, fontSize: 9)),
         ],
       ),
     );
@@ -806,6 +1001,8 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
 
   Widget _buildRequestsView() {
     return RefreshIndicator(
+      color: _cyanPulsar,
+      backgroundColor: _spaceSurface,
       onRefresh: _loadTickets,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -816,60 +1013,77 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Your requests', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800, color: _ink)),
+                    const Text('Telemetry Log', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _starlight)),
                     const SizedBox(height: 5),
                     Text(
                       _isSignedIn
-                          ? 'Requests submitted by $_currentDisplayName.'
-                          : 'Sign in or register with your university account to track reports.',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF7B867E)),
+                          ? 'Missions initiated by Voyager $_currentDisplayName.'
+                          : 'Sign in to access your recorded anomaly logs.',
+                      style: const TextStyle(fontSize: 11, color: _stardust),
                     ),
                   ],
                 ),
               ),
               if (_isSignedIn)
                 IconButton(
-                  tooltip: 'Refresh',
+                  tooltip: 'Rescan Telemetry',
                   onPressed: _loadTickets,
-                  icon: const Icon(Icons.refresh, size: 20, color: _green),
+                  icon: const Icon(Icons.refresh_rounded, size: 20, color: _cyanPulsar),
                 ),
             ],
           ),
           const SizedBox(height: 17),
           if (!_isSignedIn)
             Container(
-              padding: const EdgeInsets.all(22),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE3E9E3)),
+                color: _spaceSurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _spaceBorder),
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.school_outlined, size: 40, color: _green),
-                  const SizedBox(height: 10),
-                  const Text('University Student Account Required', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _ink)),
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: _cyanPulsar.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.shield_outlined, size: 28, color: _cyanPulsar),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('University Student Account Required', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _starlight)),
                   const SizedBox(height: 6),
                   const Text(
                     'Access is restricted to official Bahir Dar University members. Sign in or register with your @bdu.edu.et email.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: Color(0xFF768379)),
+                    style: TextStyle(fontSize: 11, color: _stardust, height: 1.4),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => _showAuthDialog(initialRegister: false),
-                          style: OutlinedButton.styleFrom(foregroundColor: _green, side: const BorderSide(color: Color(0xFF9ABAA1))),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _cyanPulsar,
+                            side: const BorderSide(color: _cyanPulsar),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
                           child: const Text('Sign in'),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: FilledButton(
                           onPressed: () => _showAuthDialog(initialRegister: true),
-                          style: FilledButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.white),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _cyanPulsar,
+                            foregroundColor: _spaceVoid,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
                           child: const Text('Register'),
                         ),
                       ),
@@ -879,19 +1093,27 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               ),
             )
           else if (_loadingTickets)
-            const Padding(padding: EdgeInsets.all(30), child: Center(child: CircularProgressIndicator()))
+            const Padding(padding: EdgeInsets.all(36), child: Center(child: CircularProgressIndicator(color: _cyanPulsar)))
           else if (_tickets.isEmpty)
             Container(
-              padding: const EdgeInsets.all(23),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE3E9E3))),
+              padding: const EdgeInsets.all(26),
+              decoration: BoxDecoration(
+                color: _spaceSurface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _spaceBorder),
+              ),
               child: Column(children: [
-                const Icon(Icons.assignment_outlined, size: 29, color: Color(0xFF78917D)),
-                const SizedBox(height: 9),
-                const Text('No requests yet', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                const Icon(Icons.radar_rounded, size: 36, color: _cyanGlow),
+                const SizedBox(height: 10),
+                const Text('No Active Transmissions', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _starlight)),
                 const SizedBox(height: 4),
-                const Text('Your submitted maintenance reports will appear here.', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: Color(0xFF87928A))),
-                const SizedBox(height: 13),
-                TextButton.icon(onPressed: () => setState(() => _tabIndex = 0), icon: const Icon(Icons.add, size: 16), label: const Text('Create a report')),
+                const Text('Your dispatched maintenance reports will beam in here.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: _stardust)),
+                const SizedBox(height: 14),
+                TextButton.icon(
+                  onPressed: () => setState(() => _tabIndex = 0),
+                  icon: const Icon(Icons.add_rounded, size: 16, color: _cyanPulsar),
+                  label: const Text('Initiate new report', style: TextStyle(color: _cyanPulsar, fontWeight: FontWeight.w700)),
+                ),
               ]),
             )
           else
@@ -902,43 +1124,83 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   }
 
   Widget _ticketCard(_Ticket ticket) {
-    final color = switch (ticket.status) {
-      'Resolved' => const Color(0xFF4F8059),
-      'In Progress' => const Color(0xFF527991),
-      'Assigned' => const Color(0xFF657D8A),
-      _ => const Color(0xFFA07A31),
+    final statusColor = switch (ticket.status) {
+      'Resolved' => _auroraEmerald,
+      'In Progress' => _cyanPulsar,
+      'Assigned' => _nebulaPurple,
+      _ => _solarFlare,
     };
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(9), border: Border.all(color: const Color(0xFFE2E8E2))),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _spaceCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _spaceBorder),
+        boxShadow: [
+          BoxShadow(color: statusColor.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2)),
+        ],
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Text('#${ticket.number}', style: const TextStyle(fontSize: 10, color: Color(0xFF7E8981), fontWeight: FontWeight.w700)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: _spaceSurface,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: _spaceBorder),
+            ),
+            child: Text('#${ticket.number}', style: const TextStyle(fontSize: 10, color: _cyanPulsar, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+          ),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-            child: Text(ticket.status, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w700)),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+            ),
+            child: Text(ticket.status, style: TextStyle(fontSize: 9, color: statusColor, fontWeight: FontWeight.w800)),
           ),
         ]),
-        const SizedBox(height: 9),
-        Text(ticket.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _ink)),
-        const SizedBox(height: 5),
-        Row(children: [const Icon(Icons.place_outlined, size: 13, color: Color(0xFF87928A)), const SizedBox(width: 3), Expanded(child: Text(ticket.location, style: const TextStyle(fontSize: 10, color: Color(0xFF87928A))))]),
+        const SizedBox(height: 10),
+        Text(ticket.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _starlight)),
+        const SizedBox(height: 6),
+        Row(children: [
+          const Icon(Icons.navigation_outlined, size: 14, color: _cyanGlow),
+          const SizedBox(width: 5),
+          Expanded(child: Text(ticket.location, style: const TextStyle(fontSize: 11, color: _stardust))),
+        ]),
         if (ticket.latitude != null && ticket.longitude != null) ...[
           const SizedBox(height: 6),
-          Row(children: [const Icon(Icons.map_outlined, size: 13, color: Color(0xFF87928A)), const SizedBox(width: 4), SelectableText('${ticket.latitude}, ${ticket.longitude}', style: const TextStyle(fontSize: 9, color: Color(0xFF68756C)))]),
+          Row(children: [
+            const Icon(Icons.satellite_alt_outlined, size: 13, color: _cyanPulsar),
+            const SizedBox(width: 5),
+            SelectableText('${ticket.latitude}, ${ticket.longitude}', style: const TextStyle(fontSize: 10, color: _cyanGlow, fontWeight: FontWeight.w600)),
+          ]),
         ],
-        const SizedBox(height: 9),
-        Row(children: [Text('${ticket.priority} priority', style: const TextStyle(fontSize: 9, color: Color(0xFF737F76))), const Spacer(), Text('${ticket.createdAt.day}/${ticket.createdAt.month}/${ticket.createdAt.year}', style: const TextStyle(fontSize: 9, color: Color(0xFF929C94)))]),
+        const SizedBox(height: 10),
+        const Divider(color: _spaceBorder, height: 1),
+        const SizedBox(height: 8),
+        Row(children: [
+          Text('${ticket.priority} priority', style: TextStyle(fontSize: 10, color: _priorityColor(ticket.priority), fontWeight: FontWeight.w700)),
+          const Spacer(),
+          Text('${ticket.createdAt.day}/${ticket.createdAt.month}/${ticket.createdAt.year}', style: const TextStyle(fontSize: 10, color: _starDim)),
+        ]),
       ]),
     );
   }
 
+  Color _priorityColor(String priority) => switch (priority) {
+    'Emergency' => _supernova,
+    'High' => _solarFlare,
+    'Medium' => _cyanPulsar,
+    _ => _stardust,
+  };
+
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text, style: const TextStyle(fontSize: 10, color: Color(0xFF57645B), fontWeight: FontWeight.w700)),
+        child: Text(text, style: const TextStyle(fontSize: 11, color: _stardust, fontWeight: FontWeight.w700)),
       );
 }
 
@@ -1025,23 +1287,23 @@ class _AuthDialogState extends State<_AuthDialog> {
         );
         if (mounted) Navigator.pop(context);
         widget.onAuthSuccess();
-        widget.showMessage('Signed in successfully.');
+        widget.showMessage('Flight deck authorization granted.');
       } else {
         // Local demo mode sign in
         widget.onDemoAuthSuccess(
           name: email.split('@').first,
           email: email,
-          department: 'Engineering',
+          department: 'Engineering Flight Division',
         );
         if (mounted) Navigator.pop(context);
-        widget.showMessage('Signed in as demo student ($email).');
+        widget.showMessage('Authorized as demo voyager ($email).');
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Sign in failed: $error'),
-            backgroundColor: const Color(0xFFC0473E),
+            content: Text('Authorization failed: $error'),
+            backgroundColor: _supernova,
           ),
         );
       }
@@ -1090,12 +1352,10 @@ class _AuthDialogState extends State<_AuthDialog> {
         }
 
         if (res.session != null) {
-          // Immediately signed in (if email confirmation was turned off)
           if (mounted) Navigator.pop(context);
           widget.onAuthSuccess();
-          widget.showMessage('Welcome, $fullName! Your student account is active.');
+          widget.showMessage('Welcome aboard, Voyager $fullName!');
         } else {
-          // Email OTP verification required
           setState(() {
             _isVerifying = true;
             _pendingVerifyEmail = email;
@@ -1103,10 +1363,9 @@ class _AuthDialogState extends State<_AuthDialog> {
             _pendingDepartment = department;
             _pendingPhone = phone;
           });
-          widget.showMessage('Verification code sent to $email. Please check your inbox.');
+          widget.showMessage('Transmission beacon sent to $email.');
         }
       } else {
-        // Local demo mode verification step
         setState(() {
           _isVerifying = true;
           _pendingVerifyEmail = email;
@@ -1120,7 +1379,7 @@ class _AuthDialogState extends State<_AuthDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Registration failed: $error'),
-            backgroundColor: const Color(0xFFC0473E),
+            backgroundColor: _supernova,
           ),
         );
       }
@@ -1158,23 +1417,22 @@ class _AuthDialogState extends State<_AuthDialog> {
 
         if (mounted) Navigator.pop(context);
         widget.onAuthSuccess();
-        widget.showMessage('Email verified successfully! Welcome, $_pendingFullName.');
+        widget.showMessage('Frequency verified! Welcome aboard, $_pendingFullName.');
       } else {
-        // Demo mode verification success
         widget.onDemoAuthSuccess(
           name: _pendingFullName,
           email: _pendingVerifyEmail,
           department: _pendingDepartment,
         );
         if (mounted) Navigator.pop(context);
-        widget.showMessage('Demo email verified! Signed in as $_pendingFullName.');
+        widget.showMessage('Demo frequency verified! Signed in as $_pendingFullName.');
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Verification failed: $error. Please verify your code.'),
-            backgroundColor: const Color(0xFFC0473E),
+            content: Text('Verification failed: $error'),
+            backgroundColor: _supernova,
           ),
         );
       }
@@ -1189,18 +1447,21 @@ class _AuthDialogState extends State<_AuthDialog> {
       if (widget.client != null) {
         await widget.client!.auth.resend(type: OtpType.signup, email: _pendingVerifyEmail);
       }
-      widget.showMessage('A new verification code has been sent to $_pendingVerifyEmail.');
+      widget.showMessage('Transmission code resent to $_pendingVerifyEmail.');
     } catch (error) {
-      widget.showMessage('Could not resend code: $error');
+      widget.showMessage('Failed to resend code: $error');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: _spaceSurface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: _spaceBorder),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: SingleChildScrollView(
@@ -1213,17 +1474,21 @@ class _AuthDialogState extends State<_AuthDialog> {
               Row(
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: _greenLight,
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: const LinearGradient(
+                        colors: [_cyanPulsar, _nebulaIndigo],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       _isVerifying
-                          ? Icons.mark_email_read_outlined
-                          : (_isRegister ? Icons.school_outlined : Icons.lock_outline),
-                      color: _green,
+                          ? Icons.mark_email_read_rounded
+                          : (_isRegister ? Icons.rocket_launch_rounded : Icons.vpn_key_rounded),
+                      color: _spaceVoid,
                       size: 21,
                     ),
                   ),
@@ -1236,34 +1501,35 @@ class _AuthDialogState extends State<_AuthDialog> {
                           _isVerifying
                               ? 'Verify University Email'
                               : (_isRegister ? 'Student Registration' : 'Student Sign In'),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _starlight),
                         ),
                         Text(
                           _isVerifying
                               ? 'Enter the 6-digit code sent to your BDU inbox'
                               : (_isRegister
-                                  ? 'Restricted to Bahir Dar University (@bdu.edu.et)'
+                                  ? 'Astro Voyage // Bahir Dar University Orbit'
                                   : 'Sign in with your verified BDU credentials'),
-                          style: const TextStyle(fontSize: 10, color: Color(0xFF7A867E)),
+                          style: const TextStyle(fontSize: 10, color: _stardust),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: Color(0xFF8A968E)),
+                    icon: const Icon(Icons.close_rounded, size: 20, color: _starDim),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // Segmented Tab Toggle (only shown when not in verification step)
+              // Segmented Tab Toggle
               if (!_isVerifying) ...[
                 Container(
-                  padding: const EdgeInsets.all(3),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF3EF),
-                    borderRadius: BorderRadius.circular(9),
+                    color: _spaceVoid,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _spaceBorder),
                   ),
                   child: Row(
                     children: [
@@ -1274,11 +1540,9 @@ class _AuthDialogState extends State<_AuthDialog> {
                             duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
-                              color: !_isRegister ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(7),
-                              boxShadow: !_isRegister
-                                  ? [const BoxShadow(color: Color(0x12000000), blurRadius: 4, offset: Offset(0, 2))]
-                                  : null,
+                              color: !_isRegister ? _spaceCard : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                              border: !_isRegister ? Border.all(color: _cyanPulsar.withValues(alpha: 0.5)) : null,
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -1286,7 +1550,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: !_isRegister ? FontWeight.w800 : FontWeight.w600,
-                                color: !_isRegister ? _green : const Color(0xFF6E7A71),
+                                color: !_isRegister ? _cyanPulsar : _stardust,
                               ),
                             ),
                           ),
@@ -1299,11 +1563,9 @@ class _AuthDialogState extends State<_AuthDialog> {
                             duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
-                              color: _isRegister ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(7),
-                              boxShadow: _isRegister
-                                  ? [const BoxShadow(color: Color(0x12000000), blurRadius: 4, offset: Offset(0, 2))]
-                                  : null,
+                              color: _isRegister ? _spaceCard : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                              border: _isRegister ? Border.all(color: _cyanPulsar.withValues(alpha: 0.5)) : null,
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -1311,7 +1573,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: _isRegister ? FontWeight.w800 : FontWeight.w600,
-                                color: _isRegister ? _green : const Color(0xFF6E7A71),
+                                color: _isRegister ? _cyanPulsar : _stardust,
                               ),
                             ),
                           ),
@@ -1346,10 +1608,11 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('University Email (@bdu.edu.et)'),
           TextFormField(
             controller: _signInEmailController,
+            style: const TextStyle(color: _starlight),
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
               hintText: 'e.g. yourname@bdu.edu.et',
-              prefixIcon: Icon(Icons.email_outlined, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: Icon(Icons.alternate_email_rounded, size: 18, color: _cyanGlow),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) return 'Enter your university email';
@@ -1361,15 +1624,16 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('Password'),
           TextFormField(
             controller: _signInPasswordController,
+            style: const TextStyle(color: _starlight),
             obscureText: _obscurePassword,
             decoration: InputDecoration(
               hintText: 'Enter your password',
-              prefixIcon: const Icon(Icons.lock_outline, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: _cyanGlow),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                   size: 18,
-                  color: const Color(0xFF7E8A81),
+                  color: _stardust,
                 ),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
@@ -1377,18 +1641,19 @@ class _AuthDialogState extends State<_AuthDialog> {
             validator: (value) =>
                 value == null || value.isEmpty ? 'Enter your password' : null,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
           FilledButton(
             onPressed: _loading ? null : _handleSignIn,
             style: FilledButton.styleFrom(
-              backgroundColor: _green,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(46),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              backgroundColor: _cyanPulsar,
+              foregroundColor: _spaceVoid,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
             ),
             child: _loading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Sign In as Student', style: TextStyle(fontWeight: FontWeight.w700)),
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _spaceVoid))
+                : const Text('Sign In as Student'),
           ),
           const SizedBox(height: 12),
           Center(
@@ -1396,7 +1661,7 @@ class _AuthDialogState extends State<_AuthDialog> {
               onPressed: () => setState(() => _isRegister = true),
               child: const Text(
                 'Don’t have an account? Register as Student',
-                style: TextStyle(fontSize: 11, color: _green, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 11, color: _cyanPulsar, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -1412,20 +1677,20 @@ class _AuthDialogState extends State<_AuthDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF5F0),
-              borderRadius: BorderRadius.circular(7),
-              border: Border.all(color: const Color(0xFFCCE0D0)),
+              color: _cyanPulsar.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _cyanPulsar.withValues(alpha: 0.35)),
             ),
             child: const Row(
               children: [
-                Icon(Icons.verified_user_outlined, size: 16, color: _green),
+                Icon(Icons.verified_user_rounded, size: 16, color: _cyanPulsar),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'University Only: You must have an active @bdu.edu.et address to register.',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _greenDark),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _starlight),
                   ),
                 ),
               ],
@@ -1436,10 +1701,11 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('Full Name'),
           TextFormField(
             controller: _fullNameController,
+            style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(
               hintText: 'e.g. Abebe Kebede',
-              prefixIcon: Icon(Icons.person_outline, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: Icon(Icons.person_outline_rounded, size: 18, color: _cyanGlow),
             ),
             validator: (value) {
               if (value == null || value.trim().length < 3) {
@@ -1453,10 +1719,11 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('Official University Email (@bdu.edu.et)'),
           TextFormField(
             controller: _registerEmailController,
+            style: const TextStyle(color: _starlight),
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
               hintText: 'e.g. student@bdu.edu.et',
-              prefixIcon: Icon(Icons.email_outlined, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: Icon(Icons.alternate_email_rounded, size: 18, color: _cyanGlow),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -1473,10 +1740,11 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('Department / Faculty'),
           TextFormField(
             controller: _departmentController,
+            style: const TextStyle(color: _starlight),
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(
               hintText: 'e.g. Software Engineering, Medicine, Civil',
-              prefixIcon: Icon(Icons.school_outlined, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: Icon(Icons.school_outlined, size: 18, color: _cyanGlow),
             ),
             validator: (value) =>
                 value == null || value.trim().isEmpty ? 'Enter your department or faculty' : null,
@@ -1486,10 +1754,11 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('Phone Number (Optional)'),
           TextFormField(
             controller: _phoneController,
+            style: const TextStyle(color: _starlight),
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(
               hintText: 'e.g. 0911234567 or +251911234567',
-              prefixIcon: Icon(Icons.phone_outlined, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: Icon(Icons.phone_outlined, size: 18, color: _cyanGlow),
             ),
           ),
           const SizedBox(height: 12),
@@ -1497,15 +1766,16 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('Password (min 6 characters)'),
           TextFormField(
             controller: _registerPasswordController,
+            style: const TextStyle(color: _starlight),
             obscureText: _obscurePassword,
             decoration: InputDecoration(
               hintText: 'Create a secure password',
-              prefixIcon: const Icon(Icons.lock_outline, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: _cyanGlow),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                   size: 18,
-                  color: const Color(0xFF7E8A81),
+                  color: _stardust,
                 ),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
@@ -1522,15 +1792,16 @@ class _AuthDialogState extends State<_AuthDialog> {
           _fieldLabel('Confirm Password'),
           TextFormField(
             controller: _confirmPasswordController,
+            style: const TextStyle(color: _starlight),
             obscureText: _obscureConfirmPassword,
             decoration: InputDecoration(
               hintText: 'Re-enter your password',
-              prefixIcon: const Icon(Icons.lock_reset_outlined, size: 18, color: Color(0xFF7E8A81)),
+              prefixIcon: const Icon(Icons.lock_reset_rounded, size: 18, color: _cyanGlow),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                   size: 18,
-                  color: const Color(0xFF7E8A81),
+                  color: _stardust,
                 ),
                 onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
               ),
@@ -1547,35 +1818,37 @@ class _AuthDialogState extends State<_AuthDialog> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _greenLight,
+              color: _nebulaIndigo.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _nebulaIndigo.withValues(alpha: 0.35)),
             ),
             child: const Row(
               children: [
-                Icon(Icons.badge_outlined, size: 16, color: _green),
+                Icon(Icons.badge_outlined, size: 16, color: _cyanPulsar),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Role: Student (Campus Maintenance Reporter)',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _greenDark),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _starlight),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
           FilledButton(
             onPressed: _loading ? null : _handleRegister,
             style: FilledButton.styleFrom(
-              backgroundColor: _green,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(46),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              backgroundColor: _cyanPulsar,
+              foregroundColor: _spaceVoid,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
             ),
             child: _loading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Create Student Account', style: TextStyle(fontWeight: FontWeight.w700)),
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _spaceVoid))
+                : const Text('Create Student Account'),
           ),
           const SizedBox(height: 12),
           Center(
@@ -1583,7 +1856,7 @@ class _AuthDialogState extends State<_AuthDialog> {
               onPressed: () => setState(() => _isRegister = false),
               child: const Text(
                 'Already have an account? Sign In',
-                style: TextStyle(fontSize: 11, color: _green, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 11, color: _cyanPulsar, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -1599,34 +1872,32 @@ class _AuthDialogState extends State<_AuthDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7FAF7),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFD6E5D8)),
+              color: _spaceSurface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _cyanPulsar.withValues(alpha: 0.4)),
             ),
             child: Column(
               children: [
-                const Icon(Icons.mark_email_read_outlined, size: 36, color: _green),
+                const Icon(Icons.mark_email_read_rounded, size: 40, color: _cyanPulsar),
                 const SizedBox(height: 8),
-                Text(
-                  'Code sent to:',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
+                const Text('Transmission Beacon Sent To:', style: TextStyle(fontSize: 11, color: _stardust)),
+                const SizedBox(height: 3),
                 Text(
                   _pendingVerifyEmail,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _greenDark),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _cyanPulsar),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 const Text(
                   'Check your university inbox or junk mail folder for your 6-digit confirmation code.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 10, color: Color(0xFF758378)),
+                  style: TextStyle(fontSize: 10, color: _stardust, height: 1.4),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           _fieldLabel('Enter 6-Digit Verification Code'),
           TextFormField(
@@ -1634,11 +1905,11 @@ class _AuthDialogState extends State<_AuthDialog> {
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             maxLength: 6,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 8),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 8, color: _cyanPulsar),
             decoration: const InputDecoration(
               counterText: '',
               hintText: '123456',
-              hintStyle: TextStyle(fontSize: 20, letterSpacing: 8, color: Color(0xFFB0BEB3)),
+              hintStyle: TextStyle(fontSize: 20, letterSpacing: 8, color: _starDim),
             ),
             validator: (value) {
               if (value == null || value.trim().length != 6) {
@@ -1647,19 +1918,20 @@ class _AuthDialogState extends State<_AuthDialog> {
               return null;
             },
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
           FilledButton(
             onPressed: _loading ? null : _handleVerifyOTP,
             style: FilledButton.styleFrom(
-              backgroundColor: _green,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(46),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              backgroundColor: _cyanPulsar,
+              foregroundColor: _spaceVoid,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
             ),
             child: _loading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Verify & Activate Student Account', style: TextStyle(fontWeight: FontWeight.w700)),
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _spaceVoid))
+                : const Text('Verify & Activate Student Account'),
           ),
           const SizedBox(height: 12),
 
@@ -1668,12 +1940,12 @@ class _AuthDialogState extends State<_AuthDialog> {
             children: [
               TextButton(
                 onPressed: () => setState(() => _isVerifying = false),
-                child: const Text('Change email', style: TextStyle(fontSize: 11, color: Color(0xFF6B786E))),
+                child: const Text('Change email', style: TextStyle(fontSize: 11, color: _stardust)),
               ),
               TextButton.icon(
                 onPressed: _handleResendOTP,
-                icon: const Icon(Icons.refresh, size: 14),
-                label: const Text('Resend code', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _green)),
+                icon: const Icon(Icons.refresh_rounded, size: 14, color: _cyanPulsar),
+                label: const Text('Resend code', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _cyanPulsar)),
               ),
             ],
           ),
@@ -1687,7 +1959,7 @@ class _AuthDialogState extends State<_AuthDialog> {
       padding: const EdgeInsets.only(bottom: 5),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF4C5851)),
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _stardust),
       ),
     );
   }
@@ -1702,9 +1974,17 @@ class _SectionHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Text(number, style: const TextStyle(fontSize: 9, letterSpacing: .7, color: Color(0xFF809087), fontWeight: FontWeight.w700)),
-      const SizedBox(width: 8),
-      Text(title, style: const TextStyle(fontSize: 13, color: _ink, fontWeight: FontWeight.w800)),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: _cyanPulsar.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: _cyanPulsar.withValues(alpha: 0.4)),
+        ),
+        child: Text(number, style: const TextStyle(fontSize: 9, letterSpacing: 0.7, color: _cyanPulsar, fontWeight: FontWeight.w800)),
+      ),
+      const SizedBox(width: 10),
+      Text(title, style: const TextStyle(fontSize: 13, color: _starlight, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
     ]);
   }
 }
@@ -1716,8 +1996,12 @@ class _DemoTag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(color: const Color(0xFFF4EEDC), borderRadius: BorderRadius.circular(20)),
-      child: const Text('DEMO MODE', style: TextStyle(fontSize: 8, letterSpacing: .6, fontWeight: FontWeight.w800, color: Color(0xFF8C6D28))),
+      decoration: BoxDecoration(
+        color: _cyanPulsar.withValues(alpha: 0.15),
+        border: Border.all(color: _cyanPulsar.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Text('ASTRO DEMO', style: TextStyle(fontSize: 8, letterSpacing: 0.8, fontWeight: FontWeight.w800, color: _cyanPulsar)),
     );
   }
 }
