@@ -12,7 +12,11 @@ void main() {
     expect(find.text('Sign in / Register'), findsOneWidget);
   });
 
-  testWidgets('Opens Auth Dialog and switches between Sign In and Student Register', (WidgetTester tester) async {
+  testWidgets('Opens Auth Dialog and enforces university email domain', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
     await tester.pumpWidget(const BduDispatchApp(client: null));
     await tester.pumpAndSettle();
 
@@ -22,17 +26,35 @@ void main() {
 
     // Verify dialog title and initial Sign In state
     expect(find.text('Student Sign In'), findsOneWidget);
-    expect(find.text('Sign In as Student'), findsOneWidget);
 
     // Switch to Student Register
     await tester.tap(find.text('Student Register'));
     await tester.pumpAndSettle();
 
-    // Verify registration fields are displayed
+    // Verify registration fields and university-only notice
     expect(find.text('Student Registration'), findsOneWidget);
-    expect(find.text('Full Name'), findsOneWidget);
-    expect(find.text('Department / Faculty'), findsOneWidget);
-    expect(find.text('Create Student Account'), findsOneWidget);
-    expect(find.text('Role: Student (Campus Maintenance Reporter)'), findsOneWidget);
+    expect(find.textContaining('University Only:'), findsOneWidget);
+    expect(find.text('Official University Email (@bdu.edu.et)'), findsOneWidget);
+
+    // Enter a non-university email
+    final emailField = find.widgetWithText(TextFormField, 'e.g. student@bdu.edu.et');
+    await tester.enterText(emailField, 'student@gmail.com');
+
+    // Scroll to submit button and tap
+    final submitButton = find.text('Create Student Account');
+    await tester.ensureVisible(submitButton);
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    // Verify error is displayed for non-university email
+    expect(find.text('Must be an official university email ending in @bdu.edu.et'), findsOneWidget);
+
+    // Now enter valid university email
+    await tester.enterText(emailField, 'student@bdu.edu.et');
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    // The university email error should be gone
+    expect(find.text('Must be an official university email ending in @bdu.edu.et'), findsNothing);
   });
 }

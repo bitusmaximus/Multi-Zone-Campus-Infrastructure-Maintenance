@@ -18,6 +18,12 @@ const _greenLight = Color(0xFFE5EFE6);
 const _ink = Color(0xFF202A25);
 const _canvas = Color(0xFFF5F6F2);
 
+/// Validates that an email belongs strictly to Bahir Dar University.
+bool _isUniversityEmail(String email) {
+  final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@([a-zA-Z0-9.-]+\.)?bdu\.edu\.et$', caseSensitive: false);
+  return regex.hasMatch(email.trim());
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -259,7 +265,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isConnected && !_isSignedIn) {
-      _showMessage('Please sign in or register your student account first.');
+      _showMessage('Please sign in or register with your university email (@bdu.edu.et).');
       await _showAuthDialog(initialRegister: false);
       return;
     }
@@ -447,7 +453,26 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE9F4EB),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.verified, size: 15, color: _green),
+                    SizedBox(width: 6),
+                    Text(
+                      'Official Bahir Dar University Email Verified',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _greenDark),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
               const Divider(color: Color(0xFFECEFEA)),
               const SizedBox(height: 12),
               if (_currentDepartment != null && _currentDepartment!.isNotEmpty) ...[
@@ -628,14 +653,14 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 20, color: Color(0xFF8A6D1C)),
+                  const Icon(Icons.school, size: 20, color: Color(0xFF8A6D1C)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _isConnected
-                          ? 'Please sign in or register as a student to submit maintenance requests.'
-                          : 'You are currently in demo mode. You can register or submit demo requests.',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF6B5314), fontWeight: FontWeight.w500),
+                          ? 'Bahir Dar University only: Sign in or register with your @bdu.edu.et email.'
+                          : 'Demo mode active. Register or sign in with your @bdu.edu.et address.',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF6B5314), fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -796,7 +821,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
                     Text(
                       _isSignedIn
                           ? 'Requests submitted by $_currentDisplayName.'
-                          : 'Sign in or register to follow your maintenance reports.',
+                          : 'Sign in or register with your university account to track reports.',
                       style: const TextStyle(fontSize: 11, color: Color(0xFF7B867E)),
                     ),
                   ],
@@ -821,12 +846,12 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.account_circle_outlined, size: 40, color: _green),
+                  const Icon(Icons.school_outlined, size: 40, color: _green),
                   const SizedBox(height: 10),
-                  const Text('Student Account Required', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _ink)),
+                  const Text('University Student Account Required', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _ink)),
                   const SizedBox(height: 6),
                   const Text(
-                    'Create a student account or sign in to submit campus issues and monitor technician assignments.',
+                    'Access is restricted to official Bahir Dar University members. Sign in or register with your @bdu.edu.et email.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11, color: Color(0xFF768379)),
                   ),
@@ -938,12 +963,14 @@ class _AuthDialog extends StatefulWidget {
 
 class _AuthDialogState extends State<_AuthDialog> {
   late bool _isRegister;
+  bool _isVerifying = false;
   bool _loading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   final _signInFormKey = GlobalKey<FormState>();
   final _registerFormKey = GlobalKey<FormState>();
+  final _verifyFormKey = GlobalKey<FormState>();
 
   // Sign In fields
   final _signInEmailController = TextEditingController();
@@ -956,6 +983,13 @@ class _AuthDialogState extends State<_AuthDialog> {
   final _phoneController = TextEditingController();
   final _registerPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  // Verification fields
+  final _otpTokenController = TextEditingController();
+  String _pendingVerifyEmail = '';
+  String _pendingFullName = '';
+  String _pendingDepartment = '';
+  String _pendingPhone = '';
 
   @override
   void initState() {
@@ -973,6 +1007,7 @@ class _AuthDialogState extends State<_AuthDialog> {
     _phoneController.dispose();
     _registerPasswordController.dispose();
     _confirmPasswordController.dispose();
+    _otpTokenController.dispose();
     super.dispose();
   }
 
@@ -1054,23 +1089,31 @@ class _AuthDialogState extends State<_AuthDialog> {
           }
         }
 
-        if (mounted) Navigator.pop(context);
-
         if (res.session != null) {
+          // Immediately signed in (if email confirmation was turned off)
+          if (mounted) Navigator.pop(context);
           widget.onAuthSuccess();
-          widget.showMessage('Welcome, $fullName! Student account created.');
+          widget.showMessage('Welcome, $fullName! Your student account is active.');
         } else {
-          widget.showMessage('Registration submitted! Please verify your email at $email to sign in.');
+          // Email OTP verification required
+          setState(() {
+            _isVerifying = true;
+            _pendingVerifyEmail = email;
+            _pendingFullName = fullName;
+            _pendingDepartment = department;
+            _pendingPhone = phone;
+          });
+          widget.showMessage('Verification code sent to $email. Please check your inbox.');
         }
       } else {
-        // Local demo mode registration
-        widget.onDemoAuthSuccess(
-          name: fullName,
-          email: email,
-          department: department,
-        );
-        if (mounted) Navigator.pop(context);
-        widget.showMessage('Demo student registered: $fullName ($email)');
+        // Local demo mode verification step
+        setState(() {
+          _isVerifying = true;
+          _pendingVerifyEmail = email;
+          _pendingFullName = fullName;
+          _pendingDepartment = department;
+          _pendingPhone = phone;
+        });
       }
     } catch (error) {
       if (mounted) {
@@ -1083,6 +1126,72 @@ class _AuthDialogState extends State<_AuthDialog> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _handleVerifyOTP() async {
+    if (!_verifyFormKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    final token = _otpTokenController.text.trim();
+
+    try {
+      if (widget.client != null) {
+        final res = await widget.client!.auth.verifyOTP(
+          email: _pendingVerifyEmail,
+          token: token,
+          type: OtpType.signup,
+        );
+
+        final verifiedUserId = res.user?.id ?? widget.client!.auth.currentUser?.id;
+        if (verifiedUserId != null) {
+          try {
+            await widget.client!.from('profiles').upsert({
+              'id': verifiedUserId,
+              'full_name': _pendingFullName,
+              'email': _pendingVerifyEmail,
+              'department': _pendingDepartment.isEmpty ? null : _pendingDepartment,
+              'phone_number': _pendingPhone.isEmpty ? null : _pendingPhone,
+              'role': 'student',
+            });
+          } catch (_) {}
+        }
+
+        if (mounted) Navigator.pop(context);
+        widget.onAuthSuccess();
+        widget.showMessage('Email verified successfully! Welcome, $_pendingFullName.');
+      } else {
+        // Demo mode verification success
+        widget.onDemoAuthSuccess(
+          name: _pendingFullName,
+          email: _pendingVerifyEmail,
+          department: _pendingDepartment,
+        );
+        if (mounted) Navigator.pop(context);
+        widget.showMessage('Demo email verified! Signed in as $_pendingFullName.');
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Verification failed: $error. Please verify your code.'),
+            backgroundColor: const Color(0xFFC0473E),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _handleResendOTP() async {
+    if (_pendingVerifyEmail.isEmpty) return;
+    try {
+      if (widget.client != null) {
+        await widget.client!.auth.resend(type: OtpType.signup, email: _pendingVerifyEmail);
+      }
+      widget.showMessage('A new verification code has been sent to $_pendingVerifyEmail.');
+    } catch (error) {
+      widget.showMessage('Could not resend code: $error');
     }
   }
 
@@ -1111,7 +1220,9 @@ class _AuthDialogState extends State<_AuthDialog> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      _isRegister ? Icons.person_add_alt_1_outlined : Icons.lock_outline,
+                      _isVerifying
+                          ? Icons.mark_email_read_outlined
+                          : (_isRegister ? Icons.school_outlined : Icons.lock_outline),
                       color: _green,
                       size: 21,
                     ),
@@ -1122,13 +1233,17 @@ class _AuthDialogState extends State<_AuthDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _isRegister ? 'Student Registration' : 'Student Sign In',
+                          _isVerifying
+                              ? 'Verify University Email'
+                              : (_isRegister ? 'Student Registration' : 'Student Sign In'),
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink),
                         ),
                         Text(
-                          _isRegister
-                              ? 'Create an account to submit & follow campus reports'
-                              : 'Enter your university credentials to access dispatch',
+                          _isVerifying
+                              ? 'Enter the 6-digit code sent to your BDU inbox'
+                              : (_isRegister
+                                  ? 'Restricted to Bahir Dar University (@bdu.edu.et)'
+                                  : 'Sign in with your verified BDU credentials'),
                           style: const TextStyle(fontSize: 10, color: Color(0xFF7A867E)),
                         ),
                       ],
@@ -1142,72 +1257,79 @@ class _AuthDialogState extends State<_AuthDialog> {
               ),
               const SizedBox(height: 16),
 
-              // Segmented Tab Toggle
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF3EF),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isRegister = false),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: !_isRegister ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(7),
-                            boxShadow: !_isRegister
-                                ? [const BoxShadow(color: Color(0x12000000), blurRadius: 4, offset: Offset(0, 2))]
-                                : null,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Sign In',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: !_isRegister ? FontWeight.w800 : FontWeight.w600,
-                              color: !_isRegister ? _green : const Color(0xFF6E7A71),
+              // Segmented Tab Toggle (only shown when not in verification step)
+              if (!_isVerifying) ...[
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF3EF),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isRegister = false),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: !_isRegister ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(7),
+                              boxShadow: !_isRegister
+                                  ? [const BoxShadow(color: Color(0x12000000), blurRadius: 4, offset: Offset(0, 2))]
+                                  : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: !_isRegister ? FontWeight.w800 : FontWeight.w600,
+                                color: !_isRegister ? _green : const Color(0xFF6E7A71),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isRegister = true),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _isRegister ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(7),
-                            boxShadow: _isRegister
-                                ? [const BoxShadow(color: Color(0x12000000), blurRadius: 4, offset: Offset(0, 2))]
-                                : null,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Student Register',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: _isRegister ? FontWeight.w800 : FontWeight.w600,
-                              color: _isRegister ? _green : const Color(0xFF6E7A71),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isRegister = true),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _isRegister ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(7),
+                              boxShadow: _isRegister
+                                  ? [const BoxShadow(color: Color(0x12000000), blurRadius: 4, offset: Offset(0, 2))]
+                                  : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Student Register',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: _isRegister ? FontWeight.w800 : FontWeight.w600,
+                                color: _isRegister ? _green : const Color(0xFF6E7A71),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
+                const SizedBox(height: 18),
+              ],
 
               // Form views
-              if (!_isRegister) _buildSignInForm() else _buildRegisterForm(),
+              if (_isVerifying)
+                _buildVerificationForm()
+              else if (!_isRegister)
+                _buildSignInForm()
+              else
+                _buildRegisterForm(),
             ],
           ),
         ),
@@ -1221,16 +1343,19 @@ class _AuthDialogState extends State<_AuthDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _fieldLabel('University Email'),
+          _fieldLabel('University Email (@bdu.edu.et)'),
           TextFormField(
             controller: _signInEmailController,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
-              hintText: 'e.g. student@bdu.edu.et',
+              hintText: 'e.g. yourname@bdu.edu.et',
               prefixIcon: Icon(Icons.email_outlined, size: 18, color: Color(0xFF7E8A81)),
             ),
-            validator: (value) =>
-                value == null || !value.contains('@') ? 'Enter a valid university email' : null,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) return 'Enter your university email';
+              if (!_isUniversityEmail(value)) return 'Must be an official university email ending in @bdu.edu.et';
+              return null;
+            },
           ),
           const SizedBox(height: 14),
           _fieldLabel('Password'),
@@ -1286,6 +1411,28 @@ class _AuthDialogState extends State<_AuthDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF5F0),
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(color: const Color(0xFFCCE0D0)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.verified_user_outlined, size: 16, color: _green),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'University Only: You must have an active @bdu.edu.et address to register.',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _greenDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
           _fieldLabel('Full Name'),
           TextFormField(
             controller: _fullNameController,
@@ -1303,17 +1450,20 @@ class _AuthDialogState extends State<_AuthDialog> {
           ),
           const SizedBox(height: 12),
 
-          _fieldLabel('University Email'),
+          _fieldLabel('Official University Email (@bdu.edu.et)'),
           TextFormField(
             controller: _registerEmailController,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
-              hintText: 'e.g. abebe.k@bdu.edu.et',
+              hintText: 'e.g. student@bdu.edu.et',
               prefixIcon: Icon(Icons.email_outlined, size: 18, color: Color(0xFF7E8A81)),
             ),
             validator: (value) {
-              if (value == null || !value.contains('@') || !value.contains('.')) {
-                return 'Enter a valid email address';
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your university email';
+              }
+              if (!_isUniversityEmail(value)) {
+                return 'Must be an official university email ending in @bdu.edu.et';
               }
               return null;
             },
@@ -1436,6 +1586,96 @@ class _AuthDialogState extends State<_AuthDialog> {
                 style: TextStyle(fontSize: 11, color: _green, fontWeight: FontWeight.w700),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationForm() {
+    return Form(
+      key: _verifyFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7FAF7),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFD6E5D8)),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.mark_email_read_outlined, size: 36, color: _green),
+                const SizedBox(height: 8),
+                Text(
+                  'Code sent to:',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+                Text(
+                  _pendingVerifyEmail,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _greenDark),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Check your university inbox or junk mail folder for your 6-digit confirmation code.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 10, color: Color(0xFF758378)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _fieldLabel('Enter 6-Digit Verification Code'),
+          TextFormField(
+            controller: _otpTokenController,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: 6,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 8),
+            decoration: const InputDecoration(
+              counterText: '',
+              hintText: '123456',
+              hintStyle: TextStyle(fontSize: 20, letterSpacing: 8, color: Color(0xFFB0BEB3)),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().length != 6) {
+                return 'Enter the full 6-digit verification code';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 18),
+
+          FilledButton(
+            onPressed: _loading ? null : _handleVerifyOTP,
+            style: FilledButton.styleFrom(
+              backgroundColor: _green,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(46),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: _loading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Verify & Activate Student Account', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => setState(() => _isVerifying = false),
+                child: const Text('Change email', style: TextStyle(fontSize: 11, color: Color(0xFF6B786E))),
+              ),
+              TextButton.icon(
+                onPressed: _handleResendOTP,
+                icon: const Icon(Icons.refresh, size: 14),
+                label: const Text('Resend code', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _green)),
+              ),
+            ],
           ),
         ],
       ),

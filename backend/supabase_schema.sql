@@ -21,7 +21,8 @@ CREATE TABLE public.profiles (
   phone_number TEXT,
   role user_role NOT NULL DEFAULT 'student',
   department TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT check_university_email_domain CHECK (email ~* '^[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.)?bdu\.edu\.et$')
 );
 
 -- 3. ZONES DIRECTORY TABLE
@@ -177,6 +178,26 @@ CREATE POLICY "Profiles update self" ON public.profiles
   FOR UPDATE TO authenticated
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
+
+-- Enforce university domain on auth signups
+CREATE OR REPLACE FUNCTION public.check_new_user_domain()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NEW.email !~* '^[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.)?bdu\.edu\.et$' THEN
+    RAISE EXCEPTION 'Registration rejected: Only official Bahir Dar University emails (@bdu.edu.et) are permitted.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tr_check_new_user_domain ON auth.users;
+CREATE TRIGGER tr_check_new_user_domain
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.check_new_user_domain();
 
 -- Automatically create or update a profile when a new user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
