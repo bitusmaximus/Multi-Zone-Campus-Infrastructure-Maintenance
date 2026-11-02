@@ -1,11 +1,11 @@
 {
-    "name": "campus_dispatch_mobile",
-    "short_name": "campus_dispatch_mobile",
+    "name": "BDU Campus Maintenance",
+    "short_name": "BDU Maintenance",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Report and track campus infrastructure maintenance requests at Bahir Dar University.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

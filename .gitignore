@@ -14,6 +14,7 @@ web_admin/out/
 web_admin/tsconfig.tsbuildinfo
 web_admin/.env.local
 web_admin/.env.*.local
+mobile_app/supabase.local.json
 npm-debug.log*
 
 # Local editor and operating system files

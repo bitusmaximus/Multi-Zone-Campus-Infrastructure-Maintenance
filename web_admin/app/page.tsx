@@ -79,6 +79,10 @@ export default function DashboardPage() {
   const [showLogin, setShowLogin] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [authNotice, setAuthNotice] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [syncError, setSyncError] = useState('');
@@ -148,8 +152,13 @@ export default function DashboardPage() {
       }
     };
     void loadSession();
-    const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = client.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(Boolean(session));
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResettingPassword(true);
+        setIsUpdatingPassword(true);
+        setShowLogin(true);
+      }
       if (session) {
         window.setTimeout(() => {
           void refreshBackend(true).catch((error: unknown) => setSyncError(error instanceof Error ? error.message : 'Could not load dispatch data.'));
@@ -222,6 +231,39 @@ export default function DashboardPage() {
     }
     setPassword('');
     setShowLogin(false);
+  };
+
+  const sendPasswordReset = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const client = supabase;
+    if (!client) return;
+    setAuthError('');
+    setAuthNotice('');
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    setAuthNotice('If this account exists, a password recovery email has been sent.');
+  };
+
+  const updatePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const client = supabase;
+    if (!client) return;
+    setAuthError('');
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    setNewPassword('');
+    setIsResettingPassword(false);
+    setIsUpdatingPassword(false);
+    setShowLogin(false);
+    setAuthNotice('Password updated.');
   };
 
   const saveChanges = async () => {
@@ -326,7 +368,7 @@ export default function DashboardPage() {
           <footer className="page-footer"><span><ShieldCheck size={14} /> BDU Facilities Operations</span><span>Internal dispatch workspace <i /> Demo data</span></footer>
         </div>
       </section>
-      {showLogin && <div className="auth-overlay" role="presentation" onClick={() => setShowLogin(false)}><form className="auth-modal" onSubmit={signIn} onClick={(event) => event.stopPropagation()}><button className="auth-close" type="button" aria-label="Close sign in" onClick={() => setShowLogin(false)}><X size={17} /></button><span className="detail-kicker">DISPATCHER ACCESS</span><h2>Sign in</h2><p>Use your campus dispatcher account to load and assign requests.</p><label>Email<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>{authError && <span className="auth-error" role="alert">{authError}</span>}<button className="assign-button" type="submit">Sign in to dispatch</button></form></div>}
+      {showLogin && <div className="auth-overlay" role="presentation" onClick={() => setShowLogin(false)}><form className="auth-modal" onSubmit={isResettingPassword ? (isUpdatingPassword ? updatePassword : sendPasswordReset) : signIn} onClick={(event) => event.stopPropagation()}><button className="auth-close" type="button" aria-label="Close sign in" onClick={() => setShowLogin(false)}><X size={17} /></button><span className="detail-kicker">DISPATCHER ACCESS</span><h2>{isResettingPassword ? 'Reset password' : 'Sign in'}</h2><p>{isUpdatingPassword ? 'Choose a new password for your dispatcher account.' : isResettingPassword ? 'We will email a secure password recovery link.' : 'Use your campus dispatcher account to load and assign requests.'}</p>{(!isResettingPassword || !isUpdatingPassword) && <label>Email<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>}{isUpdatingPassword && <label>New password<input type="password" autoComplete="new-password" minLength={6} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></label>}{!isResettingPassword && <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>}{authError && <span className="auth-error" role="alert">{authError}</span>}{authNotice && <span role="status">{authNotice}</span>}<button className="assign-button" type="submit">{isUpdatingPassword ? 'Update password' : isResettingPassword ? 'Send recovery email' : 'Sign in to dispatch'}</button>{!isResettingPassword && <button className="profile-signout" type="button" onClick={() => { setIsResettingPassword(true); setIsUpdatingPassword(false); setAuthError(''); setAuthNotice(''); }}>Forgot password?</button>}{isResettingPassword && <button className="profile-signout" type="button" onClick={() => { setIsResettingPassword(false); setIsUpdatingPassword(false); setNewPassword(''); setAuthError(''); }}>Back to sign in</button>}</form></div>}
     </main>
   );
 }

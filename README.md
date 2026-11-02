@@ -18,22 +18,21 @@ This repository contains the complete source code for the Multi-Zone Campus Infr
 5. The schema creates the private `hazard-photos` bucket and upload/read policies.
 
 #### University Email Verification (OTP)
-The mobile app only accepts `@bdu.edu.et` emails and verifies them with a 6-digit OTP code.
-To make Supabase send that code via BDU's own mail server, follow **[backend/SUPABASE_SMTP_SETUP.md](backend/SUPABASE_SMTP_SETUP.md)**.
-TL;DR: Supabase Dashboard → Project Settings → Authentication → SMTP Settings → enable Custom SMTP → enter `mail.bdu.edu.et` credentials from IT.
+The mobile app only accepts `@bdu.edu.et` emails and verifies them with a 6-digit OTP code. Configure Supabase Auth email templates to include `{{ .Token }}` and follow **[backend/BDU_OUTLOOK_MICROSOFT365_SETUP.md](backend/BDU_OUTLOOK_MICROSOFT365_SETUP.md)** for BDU's Microsoft 365 mail system.
 
 ### 2. Flutter Mobile App
-From `mobile_app`, run `flutter pub get`, then start the app with:
+From `mobile_app`, copy `supabase.local.example.json` to `supabase.local.json`, fill in your project URL and public key, then run:
 
 ```sh
-flutter run --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
+flutter pub get
+flutter run --dart-define-from-file=supabase.local.json
 ```
 
-Without those Dart defines, the app uses an in-memory demo mode. Students can register directly within the mobile app or sign in with an existing university account. The app reads and tracks only the signed-in user's requests.
+Use the Supabase project URL and a public publishable (or legacy anon) key in those Dart defines. Never embed a `service_role` or secret key in the mobile app. Students can register, verify university email by code, recover passwords by code, and sign in; the app reads and tracks only the signed-in user's requests. Without both Dart defines, the app runs in demo mode.
 Coordinates are optional and entered only when known; campus, zone, building, and room remain the primary location. The admin portal opens a supplied coordinate in Google Maps without requiring a Maps API key. Technician email links open the user's configured mail app; automated email delivery is not included.
 
 ### 3. Next.js Dispatcher Portal
-From `web_admin`, copy `.env.example` to `.env.local`, set the Supabase project URL and anon key, then run:
+From `web_admin`, copy `.env.example` to `.env.local`, set the Supabase project URL and public publishable (or legacy anon) key, then run. Configure the Supabase Auth Site URL and redirect allowlist for the admin origin to enable password reset links.
 
 ```sh
 npm install

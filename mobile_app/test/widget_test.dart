@@ -1,60 +1,104 @@
-import 'package:campus_dispatch_mobile/main.dart';
+import 'package:bdu_campus_maintenance/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Renders BduDispatchApp and displays Sign in / Register button', (WidgetTester tester) async {
+  testWidgets('Renders the app with its proper name and sign-in button', (tester) async {
     await tester.pumpWidget(const BduDispatchApp(client: null));
     await tester.pumpAndSettle();
 
+    expect((tester.widget(find.byType(MaterialApp)) as MaterialApp).title, 'BDU Campus Maintenance');
     expect(find.text('BDU Facilities'), findsOneWidget);
     expect(find.text('CAMPUS DISPATCH'), findsOneWidget);
     expect(find.text('Sign in / Register'), findsOneWidget);
   });
 
-  testWidgets('Opens Auth Dialog and enforces university email domain', (WidgetTester tester) async {
+  testWidgets('Validates university email during registration', (tester) async {
     tester.view.physicalSize = const Size(1200, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(const BduDispatchApp(client: null));
     await tester.pumpAndSettle();
-
-    // Tap Sign in / Register button
     await tester.tap(find.text('Sign in / Register'));
     await tester.pumpAndSettle();
-
-    // Verify dialog title and initial Sign In state
-    expect(find.text('Student Sign In'), findsOneWidget);
-
-    // Switch to Student Register
     await tester.tap(find.text('Student Register'));
     await tester.pumpAndSettle();
 
-    // Verify registration fields and university-only notice
     expect(find.text('Student Registration'), findsOneWidget);
     expect(find.textContaining('University Only:'), findsOneWidget);
-    expect(find.text('Official University Email (@bdu.edu.et)'), findsOneWidget);
-
-    // Enter a non-university email
     final emailField = find.widgetWithText(TextFormField, 'e.g. student@bdu.edu.et');
     await tester.enterText(emailField, 'student@gmail.com');
-
-    // Scroll to submit button and tap
-    final submitButton = find.text('Create Student Account');
-    await tester.ensureVisible(submitButton);
-    await tester.tap(submitButton);
+    final submit = find.text('Create Student Account');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
     await tester.pumpAndSettle();
-
-    // Verify error is displayed for non-university email
     expect(find.text('Must be an official university email ending in @bdu.edu.et'), findsOneWidget);
+  });
 
-    // Now enter valid university email
-    await tester.enterText(emailField, 'student@bdu.edu.et');
-    await tester.tap(submitButton);
+  testWidgets('Shows password recovery from student sign in', (tester) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const BduDispatchApp(client: null));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign in / Register'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forgot password?'));
     await tester.pumpAndSettle();
 
-    // The university email error should be gone
-    expect(find.text('Must be an official university email ending in @bdu.edu.et'), findsNothing);
+    expect(find.text('Reset Password'), findsOneWidget);
+    expect(find.text('Send recovery code'), findsOneWidget);
+    await tester.tap(find.text('Send recovery code'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter your official @bdu.edu.et email'), findsOneWidget);
+  });
+
+  testWidgets('Completes registration, verification, sign out, and sign in', (tester) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const BduDispatchApp(client: null));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign in / Register'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Student Register'));
+    await tester.pumpAndSettle();
+
+    Future<void> enterField(String hint, String value) async {
+      final field = find.widgetWithText(TextFormField, hint);
+      await tester.ensureVisible(field);
+      await tester.enterText(field, value);
+    }
+
+    await enterField('e.g. Abebe Kebede', 'Abebe Kebede');
+    await enterField('e.g. student@bdu.edu.et', 'abebe@bdu.edu.et');
+    await enterField('e.g. Software Engineering, Medicine', 'Software Engineering');
+    await enterField('Create a secure password', 'secure123');
+    await enterField('Re-enter your password', 'secure123');
+    final createAccount = find.text('Create Student Account');
+    await tester.ensureVisible(createAccount);
+    await tester.tap(createAccount);
+    await tester.pumpAndSettle();
+    expect(find.text('Verify University Email'), findsOneWidget);
+
+    await enterField('123456', '123456');
+    await tester.tap(find.text('Verify & Activate Student Account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Abebe Kebede'), findsWidgets);
+
+    await tester.tap(find.text('Abebe Kebede').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign Out'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign in / Register'));
+    await tester.pumpAndSettle();
+    await enterField('e.g. yourname@bdu.edu.et', 'abebe@bdu.edu.et');
+    await enterField('Enter your password', 'secure123');
+    await tester.tap(find.text('Sign In as Student'));
+    await tester.pumpAndSettle();
+    expect(find.text('abebe'), findsWidgets);
   });
 }
