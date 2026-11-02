@@ -1,4 +1,4 @@
-name: campus_dispatch_mobile
+name: bdu_campus_maintenance
 description: Campus infrastructure maintenance reporting and dispatch app.
 publish_to: 'none'
 version: 1.0.0+1

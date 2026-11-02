@@ -1,17 +1,20 @@
-# campus_dispatch_mobile
+# BDU Campus Maintenance
 
-A new Flutter project.
+Flutter app for reporting and tracking Bahir Dar University campus maintenance requests.
 
-## Getting Started
+## Run with Supabase
 
-This project is a starting point for a Flutter application.
+From this directory, copy `supabase.local.example.json` to the ignored `supabase.local.json`, then enter the project URL and a public Supabase publishable key (or legacy anon key):
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+flutter pub get
+flutter run --dart-define-from-file=supabase.local.json
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Never use a Supabase `service_role` or secret key in a mobile app. The app requires both values; if neither is supplied, it starts in demo mode. Supplying only one is treated as a configuration error.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For student registration and password recovery codes, configure Supabase Auth email templates to include `{{ .Token }}` and configure SMTP delivery. See [the SMTP setup guide](../backend/SUPABASE_SMTP_SETUP.md).
+
+## App identity
+
+The Flutter package identifier is `bdu_campus_maintenance`; the user-facing app name is **BDU Campus Maintenance**.

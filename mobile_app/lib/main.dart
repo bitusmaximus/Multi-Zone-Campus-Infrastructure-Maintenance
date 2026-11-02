@@ -44,8 +44,10 @@ Future<void> main() async {
 
   SupabaseClient? client;
   if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
-    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+    await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseAnonKey);
     client = Supabase.instance.client;
+  } else if (supabaseUrl.isNotEmpty || supabaseAnonKey.isNotEmpty) {
+    throw StateError('Set both SUPABASE_URL and SUPABASE_ANON_KEY to connect the app.');
   }
 
   runApp(BduDispatchApp(client: client));
@@ -59,7 +61,7 @@ class BduDispatchApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BDU Campus Dispatch - Astro Voyage',
+      title: 'BDU Campus Maintenance',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -206,7 +208,7 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
 
   String get _currentDisplayName {
     if (!_isConnected) {
-      return _demoStudentName ?? 'Astro Voyager';
+      return _demoStudentName ?? 'Campus Reporter';
     }
     if (_profileFullName != null && _profileFullName!.isNotEmpty) {
       return _profileFullName!;
@@ -577,16 +579,20 @@ class _DispatchHomeScreenState extends State<DispatchHomeScreen> {
               FilledButton.icon(
                 onPressed: () async {
                   Navigator.pop(sheetContext);
-                  if (_isConnected) {
-                    await widget.client!.auth.signOut();
-                  } else {
-                    setState(() {
-                      _demoStudentName = null;
-                      _demoStudentEmail = null;
-                      _demoStudentDepartment = null;
-                    });
+                  try {
+                    if (_isConnected) {
+                      await widget.client!.auth.signOut();
+                    } else {
+                      setState(() {
+                        _demoStudentName = null;
+                        _demoStudentEmail = null;
+                        _demoStudentDepartment = null;
+                      });
+                    }
+                    _showMessage('Signed out.');
+                  } catch (error) {
+                    _showMessage('Could not sign out: $error');
                   }
-                  _showMessage('Signed out.');
                 },
                 icon: const Icon(Icons.power_settings_new_rounded, size: 18),
                 label: const Text('Sign Out'),
@@ -1248,6 +1254,8 @@ class _AuthDialog extends StatefulWidget {
 class _AuthDialogState extends State<_AuthDialog> {
   late bool _isRegister;
   bool _isVerifying = false;
+  bool _isResettingPassword = false;
+  bool _recoveryCodeSent = false;
   bool _loading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -1255,6 +1263,7 @@ class _AuthDialogState extends State<_AuthDialog> {
   final _signInFormKey = GlobalKey<FormState>();
   final _registerFormKey = GlobalKey<FormState>();
   final _verifyFormKey = GlobalKey<FormState>();
+  final _recoveryFormKey = GlobalKey<FormState>();
 
   // Sign In fields
   final _signInEmailController = TextEditingController();
@@ -1270,10 +1279,10 @@ class _AuthDialogState extends State<_AuthDialog> {
 
   // Verification fields
   final _otpTokenController = TextEditingController();
+  final _recoveryTokenController = TextEditingController();
   String _pendingVerifyEmail = '';
   String _pendingFullName = '';
   String _pendingDepartment = '';
-  String _pendingPhone = '';
 
   @override
   void initState() {
@@ -1292,13 +1301,14 @@ class _AuthDialogState extends State<_AuthDialog> {
     _registerPasswordController.dispose();
     _confirmPasswordController.dispose();
     _otpTokenController.dispose();
+    _recoveryTokenController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSignIn() async {
     if (!_signInFormKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    final email = _signInEmailController.text.trim();
+    final email = _signInEmailController.text.trim().toLowerCase();
     final password = _signInPasswordController.text;
 
     try {
@@ -1321,7 +1331,16 @@ class _AuthDialogState extends State<_AuthDialog> {
         widget.showMessage('Signed in as demo user ($email).');
       }
     } catch (error) {
-      if (mounted) {
+      if (error is AuthException && error.code == 'email_not_confirmed') {
+        setState(() {
+          _isVerifying = true;
+          _pendingVerifyEmail = email;
+          _pendingFullName = '';
+          _pendingDepartment = '';
+          _otpTokenController.clear();
+        });
+        widget.showMessage('Verify your university email to finish signing in. Resend the code if needed.');
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Authorization failed: $error'),
@@ -1339,7 +1358,7 @@ class _AuthDialogState extends State<_AuthDialog> {
     setState(() => _loading = true);
 
     final fullName = _fullNameController.text.trim();
-    final email = _registerEmailController.text.trim();
+    final email = _registerEmailController.text.trim().toLowerCase();
     final department = _departmentController.text.trim();
     final phone = _phoneController.text.trim();
     final password = _registerPasswordController.text;
@@ -1357,20 +1376,14 @@ class _AuthDialogState extends State<_AuthDialog> {
           },
         );
 
-        final newUserId = res.user?.id;
-        if (newUserId != null) {
-          try {
-            await widget.client!.from('profiles').upsert({
-              'id': newUserId,
-              'full_name': fullName,
-              'email': email,
-              'department': department.isEmpty ? null : department,
-              'phone_number': phone.isEmpty ? null : phone,
-              'role': 'student',
-            });
-          } catch (_) {
-            // Trigger handled it or direct insert blocked
-          }
+        final user = res.user;
+        if (user == null || (user.identities?.isEmpty ?? false)) {
+          setState(() {
+            _isRegister = false;
+            _signInEmailController.text = email;
+          });
+          widget.showMessage('An account already exists for this email. Sign in instead.');
+          return;
         }
 
         if (res.session != null) {
@@ -1383,7 +1396,6 @@ class _AuthDialogState extends State<_AuthDialog> {
             _pendingVerifyEmail = email;
             _pendingFullName = fullName;
             _pendingDepartment = department;
-            _pendingPhone = phone;
           });
           widget.showMessage('Verification code sent to $email. Check your BDU inbox.');
         }
@@ -1393,7 +1405,6 @@ class _AuthDialogState extends State<_AuthDialog> {
           _pendingVerifyEmail = email;
           _pendingFullName = fullName;
           _pendingDepartment = department;
-          _pendingPhone = phone;
         });
       }
     } catch (error) {
@@ -1423,23 +1434,22 @@ class _AuthDialogState extends State<_AuthDialog> {
           type: OtpType.signup,
         );
 
-        final verifiedUserId = res.user?.id ?? widget.client!.auth.currentUser?.id;
-        if (verifiedUserId != null) {
-          try {
-            await widget.client!.from('profiles').upsert({
-              'id': verifiedUserId,
-              'full_name': _pendingFullName,
-              'email': _pendingVerifyEmail,
-              'department': _pendingDepartment.isEmpty ? null : _pendingDepartment,
-              'phone_number': _pendingPhone.isEmpty ? null : _pendingPhone,
-              'role': 'student',
-            });
-          } catch (_) {}
+        if (res.session == null || res.user == null) {
+          setState(() {
+            _isVerifying = false;
+            _isRegister = false;
+            _signInEmailController.text = _pendingVerifyEmail;
+          });
+          widget.showMessage('Email verified. Sign in with your university email and password.');
+          return;
         }
 
         if (mounted) Navigator.pop(context);
         widget.onAuthSuccess();
-        widget.showMessage('Email verified! Welcome, $_pendingFullName.');
+        final welcome = _pendingFullName.isEmpty
+            ? 'Email verified!'
+            : 'Email verified! Welcome, $_pendingFullName.';
+        widget.showMessage(welcome);
       } else {
         widget.onDemoAuthSuccess(
           name: _pendingFullName,
@@ -1465,6 +1475,7 @@ class _AuthDialogState extends State<_AuthDialog> {
 
   Future<void> _handleResendOTP() async {
     if (_pendingVerifyEmail.isEmpty) return;
+    setState(() => _loading = true);
     try {
       if (widget.client != null) {
         await widget.client!.auth.resend(type: OtpType.signup, email: _pendingVerifyEmail);
@@ -1472,6 +1483,60 @@ class _AuthDialogState extends State<_AuthDialog> {
       widget.showMessage('Verification code resent to $_pendingVerifyEmail.');
     } catch (error) {
       widget.showMessage('Failed to resend code: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _sendPasswordRecoveryCode() async {
+    if (!_recoveryFormKey.currentState!.validate()) return;
+    final client = widget.client;
+    if (client == null) {
+      widget.showMessage('Connect the app to Supabase to reset a password.');
+      return;
+    }
+
+    final email = _signInEmailController.text.trim().toLowerCase();
+    setState(() => _loading = true);
+    try {
+      await client.auth.resetPasswordForEmail(email);
+      setState(() {
+        _pendingVerifyEmail = email;
+        _recoveryCodeSent = true;
+      });
+      widget.showMessage('Password recovery code sent to $email.');
+    } catch (error) {
+      widget.showMessage('Could not send recovery code: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _completePasswordRecovery() async {
+    if (!_recoveryFormKey.currentState!.validate()) return;
+    final client = widget.client;
+    if (client == null) {
+      widget.showMessage('Connect the app to Supabase to reset a password.');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await client.auth.verifyOTP(
+        email: _pendingVerifyEmail,
+        token: _recoveryTokenController.text.trim(),
+        type: OtpType.recovery,
+      );
+      await client.auth.updateUser(
+        UserAttributes(password: _registerPasswordController.text),
+      );
+      if (mounted) Navigator.pop(context);
+      widget.onAuthSuccess();
+      widget.showMessage('Password updated and you are signed in.');
+    } catch (error) {
+      widget.showMessage('Password reset failed: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -1522,7 +1587,9 @@ class _AuthDialogState extends State<_AuthDialog> {
                         Text(
                           _isVerifying
                               ? 'Verify University Email'
-                              : (_isRegister ? 'Student Registration' : 'Student Sign In'),
+                              : _isResettingPassword
+                                  ? 'Reset Password'
+                                  : (_isRegister ? 'Student Registration' : 'Student Sign In'),
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _starlight),
                         ),
                         Text(
@@ -1545,7 +1612,7 @@ class _AuthDialogState extends State<_AuthDialog> {
               const SizedBox(height: 18),
 
               // Segmented Tab Toggle
-              if (!_isVerifying) ...[
+              if (!_isVerifying && !_isResettingPassword) ...[
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -1610,6 +1677,8 @@ class _AuthDialogState extends State<_AuthDialog> {
               // Form views
               if (_isVerifying)
                 _buildVerificationForm()
+              else if (_isResettingPassword)
+                _buildPasswordRecoveryForm()
               else if (!_isRegister)
                 _buildSignInForm()
               else
@@ -1664,6 +1733,16 @@ class _AuthDialogState extends State<_AuthDialog> {
                 value == null || value.isEmpty ? 'Enter your password' : null,
           ),
           const SizedBox(height: 22),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => setState(() {
+                _isResettingPassword = true;
+                _recoveryCodeSent = false;
+              }),
+              child: const Text('Forgot password?', style: TextStyle(fontSize: 11, color: _cyanPulsar)),
+            ),
+          ),
           FilledButton(
             onPressed: _loading ? null : _handleSignIn,
             style: FilledButton.styleFrom(
@@ -1686,6 +1765,91 @@ class _AuthDialogState extends State<_AuthDialog> {
                 style: TextStyle(fontSize: 11, color: _cyanPulsar, fontWeight: FontWeight.w700),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordRecoveryForm() {
+    return Form(
+      key: _recoveryFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _recoveryCodeSent
+                ? 'Enter the recovery code sent to $_pendingVerifyEmail and choose a new password.'
+                : 'We will send a recovery code to your university email.',
+            style: const TextStyle(fontSize: 12, color: _stardust),
+          ),
+          const SizedBox(height: 16),
+          if (!_recoveryCodeSent) ...[
+            _fieldLabel('University Email (@bdu.edu.et)'),
+            TextFormField(
+              controller: _signInEmailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(hintText: 'e.g. yourname@bdu.edu.et'),
+              validator: (value) => value != null && _isUniversityEmail(value)
+                  ? null
+                  : 'Enter your official @bdu.edu.et email',
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _loading ? null : _sendPasswordRecoveryCode,
+              child: _loading
+                  ? const CircularProgressIndicator()
+                  : const Text('Send recovery code'),
+            ),
+          ] else ...[
+            _fieldLabel('6-Digit Recovery Code'),
+            TextFormField(
+              controller: _recoveryTokenController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(hintText: '123456', counterText: ''),
+              validator: (value) => value == null || value.trim().length != 6
+                  ? 'Enter the 6-digit recovery code'
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            _fieldLabel('New Password (min 6 characters)'),
+            TextFormField(
+              controller: _registerPasswordController,
+              obscureText: _obscurePassword,
+              decoration: const InputDecoration(hintText: 'New password'),
+              validator: (value) => value == null || value.length < 6
+                  ? 'Password must be at least 6 characters'
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            _fieldLabel('Confirm New Password'),
+            TextFormField(
+              controller: _confirmPasswordController,
+              obscureText: _obscureConfirmPassword,
+              decoration: const InputDecoration(hintText: 'Confirm new password'),
+              validator: (value) => value != _registerPasswordController.text
+                  ? 'Passwords do not match'
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _loading ? null : _completePasswordRecovery,
+              child: _loading
+                  ? const CircularProgressIndicator()
+                  : const Text('Update password'),
+            ),
+            TextButton(
+              onPressed: _loading ? null : _sendPasswordRecoveryCode,
+              child: const Text('Resend recovery code'),
+            ),
+          ],
+          TextButton(
+            onPressed: () => setState(() {
+              _isResettingPassword = false;
+              _recoveryCodeSent = false;
+            }),
+            child: const Text('Back to sign in'),
           ),
         ],
       ),
@@ -1965,7 +2129,7 @@ class _AuthDialogState extends State<_AuthDialog> {
                 child: const Text('Change email', style: TextStyle(fontSize: 11, color: _stardust)),
               ),
               TextButton.icon(
-                onPressed: _handleResendOTP,
+                onPressed: _loading ? null : _handleResendOTP,
                 icon: const Icon(Icons.refresh_rounded, size: 14, color: _cyanPulsar),
                 label: const Text('Resend code', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _cyanPulsar)),
               ),

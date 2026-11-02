@@ -31,7 +31,7 @@ export function AdminSidebar({ isAuthenticated: authenticatedProp }: { isAuthent
       if (!user || !active) return;
       const { data } = await client.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
       if (!active) return;
-      const name = data?.full_name ?? user.email ?? 'Dispatcher';
+      const name: string = data?.full_name ?? user.email ?? 'Dispatcher';
       setProfileName(name);
       setProfileInitials(name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase());
     };

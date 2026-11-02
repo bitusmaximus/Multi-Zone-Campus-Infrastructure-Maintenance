@@ -24,6 +24,14 @@ export function AppTopbar({ title, onSignIn }: { title: string; onSignIn?: () =>
   const [profileName, setProfileName] = useState('Demo workspace');
   const [initials, setInitials] = useState('DM');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  const signOut = async () => {
+    if (!supabase) return;
+    setAuthError('');
+    const { error } = await supabase.auth.signOut();
+    if (error) setAuthError(`Could not sign out: ${error.message}`);
+  };
 
   useEffect(() => {
     if (!supabase) return;
@@ -45,7 +53,7 @@ export function AppTopbar({ title, onSignIn }: { title: string; onSignIn?: () =>
         client.from('ticket_logs').select('id,new_status,created_at,tickets(ticket_number,title)').order('created_at', { ascending: false }).limit(5),
       ]);
       if (!active) return;
-      const name = profile?.full_name ?? user.email ?? 'Dispatcher';
+      const name: string = profile?.full_name ?? user.email ?? 'Dispatcher';
       setProfileName(name);
       setInitials(name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase());
       if (logs?.length) {
@@ -119,13 +127,14 @@ export function AppTopbar({ title, onSignIn }: { title: string; onSignIn?: () =>
           </section>}
         </div>
         {supabase && (isAuthenticated
-          ? <button className="profile-signout" onClick={() => void supabase.auth.signOut()}>Sign out</button>
+          ? <button className="profile-signout" onClick={() => void signOut()}>Sign out</button>
           : onSignIn
             ? <button className="profile-signout" onClick={onSignIn}>Sign in</button>
             : <Link className="profile-signout" href="/">Sign in</Link>)}
         <Link className="top-profile-link" href="/profile" aria-label={`Open profile: ${profileName}`} title={profileName}>
           <span className="avatar top-avatar">{initials}</span><UserRound className="profile-link-indicator" size={13} />
         </Link>
+        {authError && <span className="auth-error" role="alert">{authError}</span>}
       </div>
     </header>
   );
