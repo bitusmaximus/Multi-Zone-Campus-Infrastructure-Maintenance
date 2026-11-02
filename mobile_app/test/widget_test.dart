@@ -75,7 +75,7 @@ void main() {
 
     await enterField('e.g. Abebe Kebede', 'Abebe Kebede');
     await enterField('e.g. student@bdu.edu.et', 'abebe@bdu.edu.et');
-    await enterField('e.g. Software Engineering, Medicine, Civil', 'Software Engineering');
+    await enterField('e.g. Software Engineering, Medicine', 'Software Engineering');
     await enterField('Create a secure password', 'secure123');
     await enterField('Re-enter your password', 'secure123');
     final createAccount = find.text('Create Student Account');

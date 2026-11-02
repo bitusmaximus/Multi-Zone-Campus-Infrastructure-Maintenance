@@ -18,9 +18,7 @@ This repository contains the complete source code for the Multi-Zone Campus Infr
 5. The schema creates the private `hazard-photos` bucket and upload/read policies.
 
 #### University Email Verification (OTP)
-The mobile app only accepts `@bdu.edu.et` emails and verifies them with a 6-digit OTP code.
-To make Supabase send that code via BDU's own mail server, follow **[backend/SUPABASE_SMTP_SETUP.md](backend/SUPABASE_SMTP_SETUP.md)**.
-TL;DR: Supabase Dashboard → Project Settings → Authentication → SMTP Settings → enable Custom SMTP → enter `mail.bdu.edu.et` credentials from IT.
+The mobile app only accepts `@bdu.edu.et` emails and verifies them with a 6-digit OTP code. Configure Supabase Auth email templates to include `{{ .Token }}` and follow **[backend/BDU_OUTLOOK_MICROSOFT365_SETUP.md](backend/BDU_OUTLOOK_MICROSOFT365_SETUP.md)** for BDU's Microsoft 365 mail system.
 
 ### 2. Flutter Mobile App
 From `mobile_app`, copy `supabase.local.example.json` to `supabase.local.json`, fill in your project URL and public key, then run:
